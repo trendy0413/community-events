@@ -29,13 +29,13 @@ One person can hold more than one role, for example organizer and attendee. The 
 
 | ID | Rule | Source | Who is hurt if this breaks | Test |
 |---|---|---|---|---|
-| R1 | Registrations never go above the event's capacity, even when many requests arrive at the same moment. | brief | An attendee shows up and has no seat. The organizer has more people than the room holds. | `R1 rejects registration when the event is full`, `R1 50 parallel registrations for 10 seats give exactly 10` |
-| R2 | One active registration per attendee per event. Registering again returns the existing registration. | brief (implied) | One person takes two seats. A retry on a weak network books twice. | `R2 registering twice returns the same registration`, `R2 10 parallel requests by one person give one registration` |
+| R1 | Registrations never go above the event's capacity, even when many requests arrive at the same moment. | brief | An attendee shows up and has no seat. The organizer has more people than the room holds. | `R1 rejects registration when the event is full`, `R1 50 parallel registrations for 10 seats give exactly 10`, `R1 R3 mixed registers and cancels keep the count equal to the active rows` |
+| R2 | One active registration per attendee per event. Registering again returns the existing registration. | brief (implied) | One person takes two seats. A retry on a weak network books twice. | `R2 registering twice returns the same registration`, `R2 10 parallel requests by one person give one registration`, `R2 parallel register and cancel by one person never return 500` |
 | R3 | Cancelling frees the seat right away. Cancelling again changes nothing. | brief | A freed seat stays blocked. A repeated cancel frees two seats. | `R3 cancel frees the seat`, `R3 double cancel frees the seat only once`, `R3 can register again after cancelling` |
 | R4 | After an event starts, new registrations and cancellations are rejected. | assumption | People join or leave an event that is already running. | `R4 rejects registration after the event starts`, `R4 rejects cancellation after the event starts` |
 | R5 | Only organizers create events. An organizer changes only their own events. | brief | One organizer edits another organizer's event. | `R5 attendee cannot create an event`, `R5 organizer cannot change another organizer's event` |
 | R6 | Only the event's organizer and admins see who registered. Only admins see other people's emails. | assumption (privacy) | Personal data leaks to other users. | `R6 attendee cannot see the attendee list`, `R6 no endpoint shows another user's email to an attendee` |
-| R7 | Capacity can't be set below the number of people already registered. | assumption | Registered people lose their seat without notice. | `R7 rejects capacity below registered count` |
+| R7 | Capacity can't be set below the number of people already registered, and can't be changed after the event starts. | assumption | Registered people lose their seat without notice. | `R7 rejects capacity below registered count`, `R7 rejects capacity change after the event starts` |
 | R8 | Every `/v1` route except `/v1/health` needs an identity. A missing, malformed or unknown user id gets 401. | added | Anyone could change data without an identity. | `R8 request without identity gets 401`, `R8 unknown user gets 401` |
 | R9 | The dev identity stub (section 9) runs only when `AUTH_MODE=dev-stub`. If `AUTH_MODE` is missing or has another value, the server refuses to start. | added | On a real deployment, anyone can act as any user. | `R9 server refuses to start without AUTH_MODE` |
 | R10 | Input limits: title 3-80 characters, description up to 500, capacity 1-500, start time in the future and less than 1 year away, a valid IANA time zone. Unknown fields are rejected. | brief (exact limits added) | Bad or huge input breaks pages or fills the database. | `R10 rejects invalid event input` |
@@ -78,6 +78,7 @@ All checks go through one function, `can(actor, action, resource)`. It denies by
 - `status` (`active` or `cancelled`), `created_at`, `cancelled_at`
 - Partial unique index on `(event_id, attendee_id) WHERE status = 'active'`. A plain unique index would block registering again after a cancel.
 - Rows are never deleted. A cancelled row stays as history. Registering again creates a new row.
+- The foreign keys from registrations to events and users use `ON DELETE RESTRICT`. The app never deletes events or users, so no delete can change the seat count behind the registration service. The demo reset empties all tables in one `TRUNCATE`.
 
 ## 6. API (`/v1`)
 
@@ -97,6 +98,8 @@ All checks go through one function, `can(actor, action, resource)`. It denies by
 | GET | `/docs`, `/openapi.json` | anyone | Swagger UI and the OpenAPI contract |
 
 `anyone` = no identity needed. `any user` = any known user (R8).
+
+**Response schemas:** every route declares a response schema. The server sends only the fields listed in it (an allow-list), so a new database column can never leak to clients. The R6 leak test calls every endpoint.
 
 Every `/v1` response sends `Cache-Control: no-store`, so seat counts are never cached by a browser or a proxy.
 
@@ -170,7 +173,7 @@ A validation error adds `errors`:
 | `FORBIDDEN` | 403 | The identity is known but not allowed (R5, R6, `scope=all` without the admin role) |
 | `NOT_FOUND` | 404 | The event or the route does not exist |
 | `EVENT_FULL` | 409 | No seats left (R1) |
-| `EVENT_STARTED` | 409 | The event has started (R4) |
+| `EVENT_STARTED` | 409 | The event has started (R4, R7) |
 | `CAPACITY_BELOW_REGISTERED` | 409 | New capacity is below the registered count (R7) |
 | `INTERNAL_ERROR` | 500 | Unexpected server error. The detail is generic. |
 
@@ -182,6 +185,7 @@ The seat count is kept in `events.registered_count`. It changes only inside thes
 1. `INSERT INTO registrations … ON CONFLICT (event_id, attendee_id) WHERE status = 'active' DO NOTHING RETURNING *`.
    - If the insert fails with a foreign key error, the event does not exist: return `NOT_FOUND`.
    - If no row comes back, the person is already registered. Select the active registration and return it (200).
+   - If that select finds no active row, the same person's cancel committed in between. Roll back and run the whole transaction again, up to 3 attempts in total. A retry must never turn into a 500. (After 3 attempts, return `INTERNAL_ERROR`. That needs three cancels by the same person during one request, so it is not expected in practice.)
 2. `UPDATE events SET registered_count = registered_count + 1 WHERE id = $1 AND registered_count < capacity AND starts_at > now() RETURNING *`.
    - If no row comes back, roll back. Read the event again: return `EVENT_STARTED` if it has started, otherwise `EVENT_FULL`.
 
@@ -191,13 +195,14 @@ The seat count is kept in `events.registered_count`. It changes only inside thes
 2. Only when a row changed: `UPDATE events SET registered_count = registered_count - 1 WHERE id = $1 AND starts_at > now() RETURNING id`.
    - If no row comes back, the event has started: roll back and return `EVENT_STARTED`.
 
-**Capacity change:** `can()` first checks that the caller owns the event (`FORBIDDEN` if not). Then one `UPDATE events SET capacity = $2, updated_at = now() WHERE id = $1 AND organizer_id = $3 AND registered_count <= $2 RETURNING *`. The `organizer_id` condition is a second guard. If no row comes back, read the event again and return `NOT_FOUND` or `CAPACITY_BELOW_REGISTERED`.
+**Capacity change:** `can()` first checks that the caller owns the event (`FORBIDDEN` if not). Then one `UPDATE events SET capacity = $2, updated_at = now() WHERE id = $1 AND organizer_id = $3 AND registered_count <= $2 AND starts_at > now() RETURNING *`. The `organizer_id` condition is a second guard. If no row comes back, read the event again and return `NOT_FOUND`, `EVENT_STARTED` or `CAPACITY_BELOW_REGISTERED`.
 
 Why this is safe:
 - Under READ COMMITTED, a second `UPDATE` on the same event row waits for the first transaction to finish. Then it checks its `WHERE` again on the newest row. So the last seat goes to exactly one transaction.
 - The same person sending two requests at once: the second `INSERT` waits for the first one's uncommitted row. If the first commits, the second hits the conflict, and its next statement sees the committed row and returns it. If the first rolls back (for example, the event was full), the second continues normally.
 - Register and cancel both lock the registration row first, then the event row. The same order means no deadlocks.
 - The `WHERE` guard gives users a clear `EVENT_FULL` error. The `CHECK` constraint is a backup if future code forgets the guard.
+- The count is kept by the registration service, not by a database trigger. Three things keep it equal to the active rows: it changes only in the transactions above, no delete can bypass them (`ON DELETE RESTRICT`, section 5), and every race test ends by checking that `registered_count` equals the number of active rows. A trigger is the upgrade path if more write paths appear.
 - "Check, then insert" (count the rows, then insert) is not used. Two requests can both see one free seat.
 
 Other option: lock the event row with `SELECT … FOR UPDATE`, then count the active rows with `COUNT(*)`. This is also correct, but slower, because every request runs a count. It becomes the better choice if seat holds with an expiry time are added (section 12). An expired hold then stops counting by itself, with no cleanup job.

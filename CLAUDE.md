@@ -45,6 +45,7 @@ web/                     React client; has its own CLAUDE.md
 
 - **R1 seat limit lives in SQL:** `UPDATE events ... WHERE registered_count < capacity`, backed by `CHECK (registered_count BETWEEN 0 AND capacity)`. Never count rows and then insert.
 - `registered_count` changes only in the registrations module (`src/modules/registrations/`), inside a transaction that its service opens. Cancel lowers it only when a registration row actually changed (R3).
+- Registrations are never deleted. Their foreign keys use `ON DELETE RESTRICT`, so no delete can change the seat count behind the registration service.
 - Lock order in every transaction: the registration row first, then the event row.
 - Every `/v1` route except `/v1/health` goes through `can()`. The acting user comes from the identity header, never from the body.
 - Errors use the problem+json shape and the codes in SPEC section 7.
@@ -61,12 +62,14 @@ Before saying any task is done, run `/verify`. Each commit must pass all checks 
 
 - Database tests run on real PostgreSQL. Never use SQLite, PGlite or mocks for concurrency tests: they run writes one at a time, so a race test would pass for the wrong reason.
 - Race tests: the pool must be larger than the number of parallel calls. Assert totals (successes, failures, final counts), never timing.
+- Every race test ends by checking that `registered_count` equals the number of active rows for that event.
 - Never weaken, skip or delete a test to make a change pass. Fix the cause.
 
 ## Code style
 
 - TypeScript strict. No `any`, no `@ts-ignore`.
 - Validate all input with Zod in the route schemas. After that, trust the types.
+- Every route declares a response schema too. The server sends only its fields (an allow-list), so a new column never leaks.
 - Route handlers stay thin: parse, call the service, map the result.
 - Comments state constraints and reasons ("why"), not what the next line does. Comments never name people or refer to meetings or chats.
 - Commit messages: `type: summary` or `type(scope): summary` (types: `feat`, `fix`, `test`, `docs`, `chore`, `db`, `ci`, `deploy`, `ops`), then the reason in the body.

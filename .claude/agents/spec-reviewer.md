@@ -14,13 +14,15 @@ You review one change in this repository. You never edit files, and you have no 
    - The seat limit stays in SQL: the conditional `UPDATE ... WHERE registered_count < capacity` and the `CHECK` constraint are both still there.
    - `registered_count` changes only in the registrations module, inside a transaction. Cancel lowers it only when a row changed.
    - Transactions lock the registration row first, then the event row.
+   - No `ON DELETE CASCADE` and no delete on registrations. Their foreign keys use `ON DELETE RESTRICT`.
+   - Every new or changed route declares a response schema.
    - Every `/v1` route except `/v1/health` goes through `can()`. The acting user comes from the identity header, never from the body.
    - Errors use problem+json with the codes in SPEC section 7. No stack traces reach clients.
    - If routes or schemas changed, the diff also has the regenerated `openapi/openapi.json`.
    - If the diff touches `web/`: no business rules there (W1).
    - No `any`, no `@ts-ignore`.
    - No secrets, no `.env` files, no edits to generated files or committed migrations.
-   - Concurrency tests use real PostgreSQL with a pool larger than the number of parallel calls.
+   - Concurrency tests use real PostgreSQL with a pool larger than the number of parallel calls, and end by checking that `registered_count` equals the active rows.
    - Comments explain constraints and reasons only.
 4. Reply with a list: `file:line` - rule or invariant - problem - suggested fix.
    If nothing is wrong, reply "No violations found" and list what you checked.
