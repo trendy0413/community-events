@@ -20,6 +20,29 @@ export async function createUser(db: Db, roles: Role[] = ['attendee']): Promise<
   return id;
 }
 
+export async function createUsers(db: Db, count: number, roles: Role[] = ['attendee']): Promise<string[]> {
+  return Promise.all(Array.from({ length: count }, () => createUser(db, roles)));
+}
+
+/**
+ * The event's stored seat count and its real number of active registrations.
+ * The two must always be equal; every race test ends by checking that.
+ */
+export async function seatCounts(db: Db, eventId: string): Promise<{ registeredCount: number; activeRows: number }> {
+  const event = await db
+    .selectFrom('events')
+    .select('registered_count')
+    .where('id', '=', eventId)
+    .executeTakeFirstOrThrow();
+  const { activeRows } = await db
+    .selectFrom('registrations')
+    .select((eb) => eb.fn.countAll<string>().as('activeRows'))
+    .where('event_id', '=', eventId)
+    .where('status', '=', 'active')
+    .executeTakeFirstOrThrow();
+  return { registeredCount: event.registered_count, activeRows: Number(activeRows) };
+}
+
 export async function createEvent(
   db: Db,
   organizerId: string,

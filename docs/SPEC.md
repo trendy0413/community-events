@@ -30,7 +30,7 @@ One person can hold more than one role, for example organizer and attendee. The 
 | ID | Rule | Source | Who is hurt if this breaks | Test |
 |---|---|---|---|---|
 | R1 | Registrations never go above the event's capacity, even when many requests arrive at the same moment. | brief | An attendee shows up and has no seat. The organizer has more people than the room holds. | `R1 rejects registration when the event is full`, `R1 50 parallel registrations for 10 seats give exactly 10`, `R1 R3 mixed registers and cancels keep the count equal to the active rows` |
-| R2 | One active registration per attendee per event. Registering again returns the existing registration. | brief (implied) | One person takes two seats. A retry on a weak network books twice. | `R2 registering twice returns the same registration`, `R2 10 parallel requests by one person give one registration`, `R2 parallel register and cancel by one person never return 500` |
+| R2 | One active registration per attendee per event. Registering again returns the existing registration. | brief (implied) | One person takes two seats. A retry on a weak network books twice. | `R2 registering twice returns the same registration`, `R2 10 parallel requests by one person give one registration`, `R2 parallel register and cancel by one person never return 500`, `R2 register retries when the same person's cancel commits in between` |
 | R3 | Cancelling frees the seat right away. Cancelling again changes nothing. | brief | A freed seat stays blocked. A repeated cancel frees two seats. | `R3 cancel frees the seat`, `R3 double cancel frees the seat only once`, `R3 can register again after cancelling` |
 | R4 | After an event starts, new registrations and cancellations are rejected. | assumption | People join or leave an event that is already running. | `R4 rejects registration after the event starts`, `R4 rejects cancellation after the event starts` |
 | R5 | Only organizers create events. An organizer changes only their own events. | brief | One organizer edits another organizer's event. | `R5 attendee cannot create an event`, `R5 organizer cannot change another organizer's event` |
@@ -193,7 +193,7 @@ The seat count is kept in `events.registered_count`. It changes only inside thes
    - If the insert fails with a foreign key error, the event does not exist: return `NOT_FOUND`.
    - If no row comes back, the person is already registered. Select the active registration and return it (200).
    - If that select finds no active row, the same person's cancel committed in between. Roll back and run the whole transaction again, up to 3 attempts in total. A retry must never turn into a 500. (After 3 attempts, return `INTERNAL_ERROR`. That needs three cancels by the same person during one request, so it is not expected in practice.)
-2. `UPDATE events SET registered_count = registered_count + 1 WHERE id = $1 AND registered_count < capacity AND starts_at > now() RETURNING *`.
+2. `UPDATE events SET registered_count = registered_count + 1 WHERE id = $1 AND registered_count < capacity AND starts_at > now() RETURNING id`.
    - If no row comes back, roll back. Read the event again: return `EVENT_STARTED` if it has started, otherwise `EVENT_FULL`.
 
 **Cancel** (one transaction):
@@ -211,6 +211,8 @@ Why this is safe:
 - The `WHERE` guard gives users a clear `EVENT_FULL` error. The `CHECK` constraint is a backup if future code forgets the guard.
 - The count is kept by the registration service, not by a database trigger. Three things keep it equal to the active rows: it changes only in the transactions above, no delete can bypass them (`ON DELETE RESTRICT`, section 5), and every race test ends by checking that `registered_count` equals the number of active rows. A trigger is the upgrade path if more write paths appear.
 - "Check, then insert" (count the rows, then insert) is not used. Two requests can both see one free seat.
+
+The rule tests R1-R4 cover these steps. The `NOT_FOUND` paths have no rule ID; `test/integration/registrations.test.ts` covers them too. The same-person race between register's insert and select needs exact timing, so `test/integration/registrations-retry.test.ts` forces it with a real cancel at that moment.
 
 Other option: lock the event row with `SELECT … FOR UPDATE`, then count the active rows with `COUNT(*)`. This is also correct, but slower, because every request runs a count. It becomes the better choice if seat holds with an expiry time are added (section 12). An expired hold then stops counting by itself, with no cleanup job.
 
