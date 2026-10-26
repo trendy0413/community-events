@@ -1,0 +1,63 @@
+{
+  "people": [
+    {
+      "id": "0d3c2f6e-1a1b-4c00-8a01-000000000001",
+      "name": "Olivia Park",
+      "email": "olivia@example.com",
+      "roles": ["organizer"]
+    },
+    {
+      "id": "0d3c2f6e-1a1b-4c00-8a01-000000000002",
+      "name": "Omar Haddad",
+      "email": "omar@example.com",
+      "roles": ["organizer"]
+    },
+    {
+      "id": "0d3c2f6e-1a1b-4c00-8a01-000000000003",
+      "name": "Ana Silva",
+      "email": "ana@example.com",
+      "roles": ["attendee"]
+    },
+    {
+      "id": "0d3c2f6e-1a1b-4c00-8a01-000000000004",
+      "name": "Ben Carter",
+      "email": "ben@example.com",
+      "roles": ["attendee"]
+    },
+    {
+      "id": "0d3c2f6e-1a1b-4c00-8a01-000000000005",
+      "name": "Ada Brooks",
+      "email": "ada@example.com",
+      "roles": ["admin"]
+    }
+  ],
+  "events": [
+    {
+      "id": "6f1c0e2a-7b3d-4e00-9b02-000000000001",
+      "organizerId": "0d3c2f6e-1a1b-4c00-8a01-000000000001",
+      "title": "Board game night",
+      "description": "Bring a game, or learn a new one. Snacks provided.",
+      "startsInDays": 5,
+      "timezone": "America/New_York",
+      "capacity": 10
+    },
+    {
+      "id": "6f1c0e2a-7b3d-4e00-9b02-000000000002",
+      "organizerId": "0d3c2f6e-1a1b-4c00-8a01-000000000001",
+      "title": "Intro to pottery",
+      "description": "A small hands-on class. All materials included.",
+      "startsInDays": 3,
+      "timezone": "America/New_York",
+      "capacity": 2
+    },
+    {
+      "id": "6f1c0e2a-7b3d-4e00-9b02-000000000003",
+      "organizerId": "0d3c2f6e-1a1b-4c00-8a01-000000000002",
+      "title": "Saturday park cleanup",
+      "description": "Gloves and bags provided. Meet at the main gate.",
+      "startsInDays": 12,
+      "timezone": "America/Chicago",
+      "capacity": 25
+    }
+  ]
+}

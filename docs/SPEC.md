@@ -65,8 +65,12 @@ All checks go through one function, `can(actor, action, resource)`. It denies by
 
 ## 5. Data model
 
+Data-model constraints have no rule ID of their own: they back up the rules in the database. `test/integration/schema.test.ts` covers each one.
+
 **users**
-- `id` uuid, `email` (unique), `name`, `roles` (a set of `organizer`, `attendee`, `admin`), `created_at`
+- `id` uuid, `email`, `name`, `roles` (a set of `organizer`, `attendee`, `admin`), `created_at`
+- Emails are unique, ignoring upper and lower case.
+- `roles` holds at least one role, and only these three.
 
 **events**
 - `id` uuid, `organizer_id` → users, `title`, `description` (optional)
@@ -78,8 +82,9 @@ All checks go through one function, `can(actor, action, resource)`. It denies by
 **registrations**
 - `id` uuid, `event_id` → events, `attendee_id` → users
 - `status` (`active` or `cancelled`), `created_at`, `cancelled_at`
+- `cancelled_at` is set exactly when `status` is `cancelled`.
 - Partial unique index on `(event_id, attendee_id) WHERE status = 'active'`. A plain unique index would block registering again after a cancel.
-- Rows are never deleted. A cancelled row stays as history. Registering again creates a new row.
+- Rows are never deleted. A cancelled row stays as history. Registering again creates a new row. A database trigger rejects any `DELETE` on registrations.
 - The foreign keys from registrations to events and users use `ON DELETE RESTRICT`. The app never deletes events or users, so no delete can change the seat count behind the registration service. The demo reset empties all tables in one `TRUNCATE`.
 
 ## 6. API (`/v1`)

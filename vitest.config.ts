@@ -20,6 +20,10 @@ export default defineConfig({
           name: 'integration',
           include: ['test/integration/**/*.test.ts'],
           globalSetup: ['test/integration/global-setup.ts'],
+          // The database can be a remote host (for example a cloud branch),
+          // where each round trip takes tens to hundreds of milliseconds.
+          testTimeout: 30_000,
+          hookTimeout: 30_000,
         },
       },
     ],

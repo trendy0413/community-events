@@ -31,7 +31,8 @@ npm --prefix web run build # production web build
 src/app.ts               buildApp(): plugins, routes, error handler (used by tests and the server)
 src/server.ts            starts the server; also the entry file Vercel detects
 src/config.ts            reads and checks environment variables
-src/db/                  pg pool and Kysely instance
+src/db/                  pg pool and Kysely instance, table types, migration runner, seed
+seed/personas.json       fixed fake demo people and events
 src/auth/devAuth.ts      dev identity stub (X-Dev-User-Id header)
 src/auth/policy.ts       can(actor, action, resource), deny by default
 src/http/errors.ts       domain errors -> application/problem+json
@@ -62,6 +63,7 @@ Before saying any task is done, run `/verify`. Each commit must pass all checks 
 
 ## Testing rules
 
+- Integration tests use their own database (`<dev database>_test`, created automatically, or `TEST_DATABASE_URL`) and empty it at the start. They never touch the dev data in `DATABASE_URL`.
 - Database tests run on real PostgreSQL. Never use SQLite, PGlite or mocks for concurrency tests: they run writes one at a time, so a race test would pass for the wrong reason.
 - Race tests: the pool must be larger than the number of parallel calls. Assert totals (successes, failures, final counts), never timing.
 - Every race test ends by checking that `registered_count` equals the number of active rows for that event.

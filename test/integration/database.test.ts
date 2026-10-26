@@ -1,14 +1,46 @@
-import pg from 'pg';
-import { expect, it } from 'vitest';
-import { loadConfig } from '../../src/config.js';
+import { sql } from 'kysely';
+import { afterAll, describe, expect, inject, it } from 'vitest';
+import { migrate } from '../../src/db/migrate.js';
+import { loadSeedData, seed } from '../../src/db/seed.js';
+import { testDb } from './helpers.js';
 
-it('runs against PostgreSQL 16 or newer', async () => {
-  const client = new pg.Client({ connectionString: loadConfig().databaseUrl });
-  await client.connect();
-  try {
-    const { rows } = await client.query<{ server_version_num: string }>('SHOW server_version_num');
+const db = testDb();
+afterAll(() => db.destroy());
+
+describe('database', () => {
+  it('runs against PostgreSQL 16 or newer', async () => {
+    const { rows } = await sql<{ server_version_num: string }>`SHOW server_version_num`.execute(db);
     expect(Number(rows[0]?.server_version_num)).toBeGreaterThanOrEqual(160000);
-  } finally {
-    await client.end();
-  }
+  });
+
+  it('applies nothing when migrations run again', async () => {
+    const result = await migrate(inject('databaseUrl'));
+    expect(result.applied).toEqual([]);
+    expect(result.skipped).toContain('001_init.sql');
+  });
+
+  it('seeds the demo people and upcoming events, and can run twice', async () => {
+    const now = new Date();
+    await seed(db, now);
+    await seed(db, now);
+
+    const { people, events } = loadSeedData();
+    const seededPeople = await db
+      .selectFrom('users')
+      .select('id')
+      .where('id', 'in', people.map((p) => p.id))
+      .execute();
+    const seededEvents = await db
+      .selectFrom('events')
+      .select(['id', 'starts_at', 'registered_count'])
+      .where('id', 'in', events.map((e) => e.id))
+      .execute();
+
+    expect(seededPeople).toHaveLength(people.length);
+    expect(seededEvents).toHaveLength(events.length);
+    for (const event of seededEvents) {
+      expect(event.starts_at.getTime()).toBeGreaterThan(now.getTime());
+      expect(event.registered_count).toBe(0);
+    }
+  });
 });
