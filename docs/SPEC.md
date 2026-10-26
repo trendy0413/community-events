@@ -53,6 +53,7 @@ Each column shows one role alone. A person with two roles gets the rights of bot
 | Action | Attendee | Organizer (owner) | Organizer (not owner) | Admin |
 |---|---|---|---|---|
 | List and view upcoming events | yes | yes | yes | yes |
+| View one event by its id, also a past one | yes | yes | yes | yes |
 | List past events (`scope=all`) | no | no | no | yes |
 | Create an event | no | yes | yes | no |
 | Change an event's capacity | no | yes | no | no |
@@ -62,6 +63,8 @@ Each column shows one role alone. A person with two roles gets the rights of bot
 | See all users (with emails) | no | no | no | yes |
 
 All checks go through one function, `can(actor, action, resource)`. It denies by default. The actor always comes from the identity header (section 9), never from the request body.
+
+Rows outside R5 and R6 have no rule ID of their own. `test/unit/policy.test.ts` checks every cell of this table.
 
 ## 5. Data model
 
@@ -129,7 +132,20 @@ Every `/v1` response sends `Cache-Control: no-store`, so seat counts are never c
 
 `myRegistration` is `null` when the caller has no active registration.
 
-**Create event** body: `{title, description?, startsAt, timezone, capacity}`. `startsAt` is ISO 8601 with an offset or `Z`. A time without an offset is rejected.
+**Create event** body: `{title, description?, startsAt, timezone, capacity}`.
+- `startsAt` is an RFC 3339 date-time (the strict form of ISO 8601) with an offset or `Z`, for example `2026-11-05T18:00:00-05:00`. A time without an offset is rejected.
+- `timezone` is stored with its standard spelling, so `america/new_york` becomes `America/New_York`.
+- An empty `description` is stored as `null`, the same as leaving it out.
+
+**Attendee list** (`GET /v1/events/{id}/registrations`)
+
+```json
+{
+  "registrations": [
+    { "id": "…", "attendee": { "id": "…", "name": "Ana Silva" }, "registeredAt": "2026-10-26T15:04:05.000Z" }
+  ]
+}
+```
 
 **Registration**
 

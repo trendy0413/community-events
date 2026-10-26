@@ -36,6 +36,8 @@ seed/personas.json       fixed fake demo people and events
 src/auth/devAuth.ts      dev identity stub (X-Dev-User-Id header)
 src/auth/policy.ts       can(actor, action, resource), deny by default
 src/http/errors.ts       domain errors -> application/problem+json
+src/http/schemas.ts      shared Zod schemas (problem shape, event id param)
+src/http/v1.ts           the /v1 scope: identity check, then the module routes
 src/modules/<feature>/   routes.ts, service.ts, repository.ts, schemas.ts
 migrations/*.sql         schema changes, add-only
 scripts/                 repo tooling, for example the rule-to-test check

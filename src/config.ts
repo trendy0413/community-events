@@ -31,3 +31,24 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const { PORT, HOST, DATABASE_URL, LOG_LEVEL } = parsed.data;
   return { port: PORT, host: HOST, databaseUrl: DATABASE_URL, logLevel: LOG_LEVEL };
 }
+
+/** The only identity mode this build has: the dev stub (SPEC section 9). */
+export type AuthMode = 'dev-stub';
+
+export interface ServerConfig extends Config {
+  authMode: AuthMode;
+}
+
+// R9: no default. Real sign-in does not exist yet, so the server must be
+// told on purpose that it runs the stub; a deploy that forgets the variable
+// stops at startup instead of trusting a header in silence.
+const AuthModeSchema = z.literal('dev-stub', {
+  error: 'AUTH_MODE must be set to "dev-stub". It is the only identity mode in this build (see docs/SPEC.md section 9).',
+});
+
+/** Config for the HTTP server. Scripts that only touch the database use loadConfig. */
+export function loadServerConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
+  const authMode = AuthModeSchema.safeParse(env.AUTH_MODE);
+  if (!authMode.success) throw new Error(`Invalid environment:\n${z.prettifyError(authMode.error)}`);
+  return { ...loadConfig(env), authMode: authMode.data };
+}

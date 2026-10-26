@@ -8,14 +8,27 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
-import type { Config } from './config.js';
+import type { AuthMode, Config } from './config.js';
+import type { Db } from './db/client.js';
 import { frameworkErrors, registerErrorHandling } from './http/errors.js';
+import { v1Routes } from './http/v1.js';
 
 export interface AppOptions {
+  db: Db;
+  /** Must be given on purpose; there is no default (R9). */
+  authMode: AuthMode;
   logLevel?: Config['logLevel'];
 }
 
-export async function buildApp(options: AppOptions = {}) {
+// The type already limits authMode; this also stops an entry file that
+// skipped loadServerConfig and passed an unchecked value.
+function assertDevStub(mode: string): asserts mode is AuthMode {
+  if (mode !== 'dev-stub') throw new Error(`Unsupported AUTH_MODE "${mode}"`);
+}
+
+export async function buildApp(options: AppOptions) {
+  assertDevStub(options.authMode);
+
   const app = Fastify({
     logger: {
       level: options.logLevel ?? 'info',
@@ -27,6 +40,7 @@ export async function buildApp(options: AppOptions = {}) {
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
+  app.decorateRequest('actor', null);
   registerErrorHandling(app);
 
   app.addHook('onRequest', async (request, reply) => {
@@ -39,11 +53,30 @@ export async function buildApp(options: AppOptions = {}) {
   await app.register(swagger, {
     openapi: {
       openapi: '3.1.0',
-      info: { title: 'Community Events API', version: '0.1.0' },
+      info: {
+        title: 'Community Events API',
+        version: '0.1.0',
+        description: 'Contract for docs/SPEC.md. Identity is a dev stub: send a demo user id in X-Dev-User-Id.',
+      },
+      components: {
+        securitySchemes: {
+          devUser: {
+            type: 'apiKey',
+            in: 'header',
+            name: 'X-Dev-User-Id',
+            description: 'Dev identity stub (SPEC section 9): the id of a seeded demo user. Not real sign-in.',
+          },
+        },
+      },
+      security: [{ devUser: [] }],
     },
     transform: jsonSchemaTransform,
   });
   await app.register(swaggerUi, { routePrefix: '/docs' });
+  // The contract at a stable path, for client generators (SPEC section 6).
+  app.get('/openapi.json', { schema: { hide: true } }, () => app.swagger());
+
+  await app.register(v1Routes, { prefix: '/v1', db: options.db });
 
   return app;
 }

@@ -24,6 +24,10 @@ export default defineConfig({
           // where each round trip takes tens to hundreds of milliseconds.
           testTimeout: 30_000,
           hookTimeout: 30_000,
+          // One file at a time: the race tests load the database on purpose,
+          // and on a small server that load slowed other files' tests into
+          // their timeouts. Tests inside a file still run their own races.
+          fileParallelism: false,
         },
       },
     ],

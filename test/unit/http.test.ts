@@ -1,17 +1,23 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { type App, buildApp } from '../../src/app.js';
+import { LOCAL_DATABASE_URL } from '../../src/config.js';
+import { createDb } from '../../src/db/client.js';
 import { DomainError, type Problem } from '../../src/http/errors.js';
 
+// These tests use only the routes added below, outside the /v1 identity
+// scope, so the database is never queried and need not be running.
+const db = createDb(LOCAL_DATABASE_URL);
 let app: App | undefined;
 
 afterEach(async () => {
   await app?.close();
   app = undefined;
 });
+afterAll(() => db.destroy());
 
 async function appWithTestRoutes(): Promise<App> {
-  app = await buildApp({ logLevel: 'silent' });
+  app = await buildApp({ db, authMode: 'dev-stub', logLevel: 'silent' });
   app.post('/v1/test/validate', { schema: { body: z.object({ capacity: z.number().int().min(1) }) } }, () => ({ ok: true }));
   app.get('/v1/test/full', () => {
     throw new DomainError('EVENT_FULL', 'All 10 seats are taken.');

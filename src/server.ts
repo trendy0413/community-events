@@ -1,8 +1,12 @@
 import { buildApp } from './app.js';
-import { loadConfig } from './config.js';
+import { loadServerConfig } from './config.js';
+import { createDb } from './db/client.js';
 
-const config = loadConfig();
-const app = await buildApp({ logLevel: config.logLevel });
+// Throws before anything starts when AUTH_MODE is missing (R9).
+const config = loadServerConfig();
+const db = createDb(config.databaseUrl);
+const app = await buildApp({ db, authMode: config.authMode, logLevel: config.logLevel });
+app.addHook('onClose', () => db.destroy());
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, () => {
