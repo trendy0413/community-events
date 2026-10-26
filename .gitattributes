@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.png binary
+
+package-lock.json linguist-generated=true -diff
+web/package-lock.json linguist-generated=true -diff
+openapi/openapi.json linguist-generated=true
+web/src/api/schema.d.ts linguist-generated=true
+web/src/components/ui/** linguist-generated=true

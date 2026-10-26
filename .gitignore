@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+/public/
+.vercel/
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+*.log
+.DS_Store
