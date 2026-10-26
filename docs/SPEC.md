@@ -42,7 +42,9 @@ One person can hold more than one role, for example organizer and attendee. The 
 
 Source: `brief` = stated in the brief. `brief (implied)` = follows from the brief. `assumption` = a product choice (see also section 11). `added` = a safety rule the brief does not ask for.
 
-Test names start with the rule ID, so `grep -rw R3 docs test` finds the rule and its tests.
+Test names start with the rule ID, so `grep -rw R3 docs test` finds the rule and its tests. `npm run check:rules` checks this both ways: every rule has its tests, and every rule test is listed here.
+
+The shared HTTP contract in sections 6 and 7 (one error shape, no caching) applies to every route, so it has no rule ID. The tests in `test/unit/http.test.ts` cover it.
 
 ## 4. Permissions
 
@@ -99,7 +101,7 @@ All checks go through one function, `can(actor, action, resource)`. It denies by
 
 `anyone` = no identity needed. `any user` = any known user (R8).
 
-**Response schemas:** every route declares a response schema. The server sends only the fields listed in it (an allow-list), so a new database column can never leak to clients. The R6 leak test calls every endpoint.
+**Response schemas:** every `/v1` route declares a response schema. The server sends only the fields listed in it (an allow-list), so a new database column can never leak to clients. The R6 leak test calls every endpoint.
 
 Every `/v1` response sends `Cache-Control: no-store`, so seat counts are never cached by a browser or a proxy.
 

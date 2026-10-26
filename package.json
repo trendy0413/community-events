@@ -1,0 +1,40 @@
+{
+  "name": "community-events",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Event registration API (Fastify + PostgreSQL) whose capacity rule holds under concurrent requests.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "cross-env AUTH_MODE=dev-stub node --watch --env-file-if-exists=.env --import tsx src/server.ts",
+    "db:up": "docker compose up -d --wait db",
+    "db:down": "docker compose down",
+    "test": "cross-env AUTH_MODE=dev-stub vitest run",
+    "test:unit": "cross-env AUTH_MODE=dev-stub vitest run --project unit",
+    "lint": "eslint . && npm run check:rules",
+    "check:rules": "tsx scripts/check-rule-tests.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/swagger": "^9.9.2",
+    "@fastify/swagger-ui": "^6.1.2",
+    "fastify": "^5.12.7",
+    "fastify-type-provider-zod": "^7.0.0",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "cross-env": "^10.1.0",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.0.5"
+  }
+}

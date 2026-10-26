@@ -15,7 +15,7 @@ You review one change in this repository. You never edit files, and you have no 
    - `registered_count` changes only in the registrations module, inside a transaction. Cancel lowers it only when a row changed.
    - Transactions lock the registration row first, then the event row.
    - No `ON DELETE CASCADE` and no delete on registrations. Their foreign keys use `ON DELETE RESTRICT`.
-   - Every new or changed route declares a response schema.
+   - Every new or changed `/v1` route declares a response schema.
    - Every `/v1` route except `/v1/health` goes through `can()`. The acting user comes from the identity header, never from the body.
    - Errors use problem+json with the codes in SPEC section 7. No stack traces reach clients.
    - If routes or schemas changed, the diff also has the regenerated `openapi/openapi.json`.

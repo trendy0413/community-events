@@ -8,13 +8,14 @@ Business rules (R1-R10, W1-W5) and the API contract live in `docs/SPEC.md`. Read
 ```bash
 npm install
 npm --prefix web install   # web client dependencies
-npm run db:up              # PostgreSQL 16 in Docker on localhost:54329 (or set DATABASE_URL to any PostgreSQL 16)
+npm run db:up              # PostgreSQL 16 in Docker on localhost:15432 (or set DATABASE_URL to any PostgreSQL 16)
 npm run migrate            # apply migrations/*.sql
 npm run seed               # demo people and events
 npm run dev                # API on http://localhost:3000, Swagger UI at /docs
 npm test                   # all tests; without PostgreSQL it stops within seconds with a "needs PostgreSQL 16" message (it never skips)
 npm run test:unit          # tests that need no database
-npm run lint
+npm run lint               # ESLint, then the rule-to-test check
+npm run check:rules        # SPEC rule IDs vs test names; `npm run check:rules -- --strict` also fails on missing tests
 npm run typecheck
 npm run openapi            # export openapi/openapi.json and regenerate web/src/api/schema.d.ts
 npm run mutants            # only if mutants/ exists: each mutant must be caught by a test
@@ -36,6 +37,7 @@ src/auth/policy.ts       can(actor, action, resource), deny by default
 src/http/errors.ts       domain errors -> application/problem+json
 src/modules/<feature>/   routes.ts, service.ts, repository.ts, schemas.ts
 migrations/*.sql         schema changes, add-only
+scripts/                 repo tooling, for example the rule-to-test check
 test/unit/               no database
 test/integration/        real PostgreSQL
 web/                     React client; has its own CLAUDE.md
@@ -69,7 +71,7 @@ Before saying any task is done, run `/verify`. Each commit must pass all checks 
 
 - TypeScript strict. No `any`, no `@ts-ignore`.
 - Validate all input with Zod in the route schemas. After that, trust the types.
-- Every route declares a response schema too. The server sends only its fields (an allow-list), so a new column never leaks.
+- Every `/v1` route declares a response schema too. The server sends only its fields (an allow-list), so a new column never leaks.
 - Route handlers stay thin: parse, call the service, map the result.
 - Comments state constraints and reasons ("why"), not what the next line does. Comments never name people or refer to meetings or chats.
 - Commit messages: `type: summary` or `type(scope): summary` (types: `feat`, `fix`, `test`, `docs`, `chore`, `db`, `ci`, `deploy`, `ops`), then the reason in the body.
