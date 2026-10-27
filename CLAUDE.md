@@ -1,11 +1,12 @@
 # community-events: guide for coding agents
 
 Event registration platform: a Fastify + PostgreSQL REST API, plus a React web client in `web/`.
-Business rules (R1-R10, the supply flow's S1-S8, W1-W6) and the API contract live in `docs/SPEC.md`. Read it before changing behavior.
+Business rules (R1-R10, the supply flow's S1-S8, W1-W6, monitoring O1-O3) and the API contract live in `docs/SPEC.md`. Read it before changing behavior.
 
 ## Commands
 
 ```bash
+docker compose up --build # everything: database, setup, API on :3000, web client on :8080 (only Docker needed)
 npm install
 npm --prefix web install   # web client dependencies
 npm run db:up              # PostgreSQL 16 in Docker on localhost:15432 (or set DATABASE_URL to any PostgreSQL 16)
@@ -13,6 +14,7 @@ npm run migrate            # apply migrations/*.sql
 npm run seed               # demo people and events
 npm run demo:reset         # wipe and re-seed; refuses a database with people outside the seed file
 npm run smoke              # check a running server from outside (SMOKE_URL, default the local API)
+npm run check:counts       # O3: every stored count equals its rows; exits 1 if not (the monitor workflow runs it)
 npm run dev                # API on http://localhost:3000, Swagger UI at /docs
 npm test                   # all tests; without PostgreSQL it stops within seconds with a "needs PostgreSQL 16" message (it never skips)
 npm run test:unit          # tests that need no database
@@ -44,8 +46,12 @@ src/http/errors.ts       domain errors -> application/problem+json
 src/http/schemas.ts      shared Zod schemas (problem shape, event id param, list limit)
 src/http/openapi.ts      OpenAPI components: schemas named with .meta({ id }), unused ones dropped
 src/http/v1.ts           the /v1 scope: identity check, then the module routes
+src/observability/       Sentry start-up (only src/server.ts imports it; tests pass their own reporter)
+src/db/count-drift.ts    the O3 count check
 src/modules/<feature>/   routes.ts, service.ts, repository.ts, schemas.ts
 migrations/*.sql         schema changes, add-only
+Dockerfile, docker-compose.yml   the one-command local stack; web/Dockerfile and web/nginx.conf serve the client
+.github/workflows/       ci.yml, demo-ops.yml (nightly reset), monitor.yml (uptime and count alert)
 vercel.json              demo API on Vercel; its build runs scripts/vercel-build.ts (migrations)
 web/vercel.json          demo web client, a second Vercel project that forwards /v1, /docs, /openapi.json to the API
 scripts/                 repo tooling, for example the rule-to-test check

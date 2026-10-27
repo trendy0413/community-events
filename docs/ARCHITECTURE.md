@@ -185,7 +185,7 @@ Not chosen: Express (no built-in validation or contract), NestJS (heavy for one 
 | Read-only admin | Suspend users, change roles, audit log |
 | Web client | iOS and Android apps on the same contract |
 | One region, one database | Read replicas, caching for read-heavy pages |
-| Logs per request | Error tracking, traces, alerts (section 9) |
+| Sentry for server errors, a request id on every log line, one uptime check, one count alert | Traces and dashboards when there is traffic to read them (section 9) |
 | No notifications | Email and push through a queue with an outbox table |
 
 ## 8. Scaling, security and third parties
@@ -202,6 +202,8 @@ The live demo is for reviewing, not for production:
 - **Web:** a second Vercel project ([web/vercel.json](../web/vercel.json)) serves the static build and forwards `/v1`, `/docs` and `/openapi.json` to the API project, so the browser sees one origin. (Vercel's Fastify preset sends every path to the function and does not serve a `public/` folder, so one project could not serve both.)
 - **Database:** Neon PostgreSQL 16 (free tier, `aws-us-east-1`). Its pooled connection for the app, the direct one for migrations and the nightly reset.
 - **Guards:** fake `@example.com` people only, no sign-up, a firewall rule of at most 400 writes per minute per IP, `noindex`, and a nightly reset with a live check ([.github/workflows/demo-ops.yml](../.github/workflows/demo-ops.yml)).
+- **Monitoring:** every 30 minutes [monitor.yml](../.github/workflows/monitor.yml) calls `/v1/health`, then compares every stored count with its rows (`npm run check:counts`); a failed run emails whoever last changed its schedule (the repository owner). GitHub pauses schedules after 60 days without commits; production adds an outside uptime service. With `SENTRY_DSN` set, server errors (500s) go to Sentry with their request id; without it they are only logged. Not every minute: the free database sleeps when idle, and each check wakes it.
+- **Local copy:** `docker compose up --build` runs the same stack on one machine: PostgreSQL, a one-off setup (migrations, demo data), the API, and nginx serving the web client and forwarding the API paths, as the web project does here.
 
 | Area | Demo now | Production | Add when |
 |---|---|---|---|
@@ -213,7 +215,7 @@ The live demo is for reviewing, not for production:
 | Tenancy | None | Organizations and memberships; company check in `can()`; row-level security | With the first business customer |
 | Background jobs | None | A queue (pg-boss first, SQS later) and an outbox table | With the first notification |
 | Abuse protection | One firewall rule per IP | WAF rules and per-user limits in the API | Before launch |
-| Monitoring | Logs kept one hour | Sentry, OpenTelemetry traces, uptime checks, an alert if any event's count ever differs from its active registrations | Before launch |
+| Monitoring | Sentry for server errors (O2), a request id on every log line (O1), an uptime check and a count alert every 30 minutes (O3, [monitor.yml](../.github/workflows/monitor.yml)); host logs kept one hour | The same, plus log retention, uptime checks every minute from several regions, an on-call route | Before launch |
 | Environments | One demo | Dev, staging, production; add-only migrations in CD | With the second engineer |
 | Backups | Not needed (fake data) | Point-in-time restore, a tested restore, written recovery targets | Before launch |
 | Infrastructure setup | CLI and dashboard | Terraform or Pulumi | With two or more environments |

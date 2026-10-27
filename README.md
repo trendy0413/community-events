@@ -15,7 +15,15 @@ A REST API for community events: organizers create events with a capacity, atten
 
 ## Instructions for running the application
 
-You need **Node.js 24** and **PostgreSQL 16**.
+**One command, only Docker needed:**
+
+```bash
+docker compose up --build
+```
+
+Then open http://localhost:8080 (web client) or http://localhost:3000/docs (Swagger UI). It starts PostgreSQL, applies the migrations, loads fresh demo data, and starts the API and the web client. Stop with `docker compose down`. Each start resets the demo data in that database, which is the same one `npm run db:up` uses below.
+
+**For development** you need **Node.js 24** and **PostgreSQL 16**:
 
 ```bash
 npm install
@@ -28,7 +36,7 @@ npm run dev        # API on http://localhost:3000, Swagger UI on http://localhos
 - **No Docker?** Put the connection string of any PostgreSQL 16 database in a `.env` file (see [.env.example](.env.example)) and skip `npm run db:up`.
 - **Web client:** `npm --prefix web install`, then `npm --prefix web run dev` (http://localhost:5173, forwards `/v1` to the API).
 - **Tests:** `npm test` (unit and integration; without a database it stops in seconds with a clear message and never skips), `npm run lint`, `npm run typecheck`, `npm run mutants`, and `npm --prefix web test`.
-- **Nothing to set up:** [CI](.github/workflows/ci.yml) runs all of this on every push, including the Docker steps above (install, `db:up`, migrate, seed, test).
+- **Nothing to set up:** [CI](.github/workflows/ci.yml) runs all of this on every push, including both Docker paths: `docker compose up --build` on a fresh clone with the live checks against it, and `db:up`, migrate, seed, test.
 
 The integration tests use their own database (`<your database>_test`, created on the first run) and empty it at the start, so your dev data is never touched. `npm run demo:reset` wipes the dev database and seeds it again with some seats taken.
 
@@ -55,7 +63,8 @@ The integration tests use their own database (`<your database>_test`, created on
 | PostgreSQL 16, Kysely, plain SQL migrations | Transactions and constraints enforce the seat rule; the SQL that matters stays visible. |
 | A counter with a conditional `UPDATE` | Exactly one request gets the last seat, with one short row lock and no retries ([SPEC section 8](docs/SPEC.md#8-how-the-last-seat-stays-safe)). |
 | OpenAPI generated from the route schemas | Typed clients for web now, Swift and Kotlin later; CI fails if the contract drifts. |
-| Spec first | [docs/SPEC.md](docs/SPEC.md) holds rules R1-R10, S1-S8 (jobsite supply) and W1-W6; test names start with the rule ID. |
+| Spec first | [docs/SPEC.md](docs/SPEC.md) holds rules R1-R10, S1-S8 (jobsite supply), W1-W6 (web client) and O1-O3 (monitoring); test names start with the rule ID. |
+| Light monitoring | Sentry for server errors, a request id on every log line, one uptime check and one count alert ([SPEC section 15](docs/SPEC.md#15-running-and-monitoring-beyond-the-brief)). No tracing or dashboards yet. |
 
 More, with diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -85,7 +94,7 @@ More, with diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 1. Managed sign-in with tokens verified at the API, MFA for admins. Today anyone can act as anyone.
 2. Company-owned accounts, paid hosting tiers, separate staging and production databases, backups with a tested restore.
-3. Monitoring: error tracking, traces, uptime checks, and an alert if an event's count ever differs from its active registrations (the [nightly smoke check](scripts/smoke.ts) already checks this on the demo).
+3. Monitoring: the MVP set is built (Sentry, request ids, an uptime check and a count alert every 30 minutes, [monitor.yml](.github/workflows/monitor.yml)). For real users: a Sentry project per environment with an on-call route, and uptime checks every minute from more than one region.
 4. Per-user rate limits and abuse protection.
 5. Retention rules and in-app account deletion.
 
