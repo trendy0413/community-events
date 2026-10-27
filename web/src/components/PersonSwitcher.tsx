@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronDown, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,19 +10,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { personas } from '../demo/people';
-import { setCurrentPerson, useCurrentPerson } from '../identity';
+import { useSwitchPerson } from '../api/queries';
+import { useCurrentPerson } from '../identity';
 import { PersonAvatar } from './PersonAvatar';
 
 /** Picks who you are (W2). The server decides what that person may do. */
 export function PersonSwitcher() {
   const person = useCurrentPerson();
-  const queryClient = useQueryClient();
-
-  const choose = (id: string | null) => {
-    setCurrentPerson(id);
-    // Answers for the previous person must not show for the new one.
-    queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'health' });
-  };
+  const choose = useSwitchPerson();
 
   return (
     <DropdownMenu>

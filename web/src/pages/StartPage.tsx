@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useQueryClient } from '@tanstack/react-query';
 import { PersonAvatar } from '../components/PersonAvatar';
 import { personas } from '../demo/people';
-import { setCurrentPerson, useCurrentPerson } from '../identity';
+import { useSwitchPerson } from '../api/queries';
+import { useCurrentPerson } from '../identity';
 
 const GROUPS = [
   { role: 'organizer', title: 'Organizers' },
@@ -16,12 +16,11 @@ const GROUPS = [
 
 export function StartPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const switchPerson = useSwitchPerson();
   const current = useCurrentPerson();
 
   const continueAs = (id: string, to: string) => {
-    setCurrentPerson(id);
-    queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'health' });
+    switchPerson(id);
     void navigate(to);
   };
 

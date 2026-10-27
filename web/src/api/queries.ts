@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCurrentPerson } from '../identity';
+import { setCurrentPerson, useCurrentPerson } from '../identity';
 import { api, ApiError, type Schemas, unwrap } from './client';
 
 // TanStack Query hooks, one per API call. Keys start with the person's id,
@@ -79,6 +79,15 @@ export function useUsers() {
     queryFn: () => unwrap(api.GET('/v1/users')),
     retry: retryTransient,
   });
+}
+
+/** Picks who you are (W2). The previous person's answers are dropped, so they never show for the new one. */
+export function useSwitchPerson() {
+  const client = useQueryClient();
+  return (id: string | null) => {
+    setCurrentPerson(id);
+    client.removeQueries({ predicate: (query) => query.queryKey[0] !== 'health' });
+  };
 }
 
 /** After a write, everything this person sees may have changed: seat counts, lists, their registrations. */
