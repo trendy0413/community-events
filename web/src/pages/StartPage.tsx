@@ -73,7 +73,7 @@ export function StartPage() {
                 .map((person) => (
                   <li key={person.id}>
                     <Card size="sm" className="h-full">
-                      <CardContent className="flex items-start gap-3">
+                      <CardContent className="flex flex-1 items-start gap-3">
                         <PersonAvatar name={person.name} roles={person.roles} className="size-10 text-sm" />
                         <div className="min-w-0 flex-1 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">

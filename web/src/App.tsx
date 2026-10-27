@@ -40,7 +40,8 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <RouterProvider router={router} />
-        <Toaster position="top-center" />
+        {/* The app has light colors only; sonner would otherwise follow a dark OS setting. */}
+        <Toaster position="top-center" theme="light" />
       </TooltipProvider>
     </QueryClientProvider>
   );

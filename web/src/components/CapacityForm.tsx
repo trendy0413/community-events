@@ -18,11 +18,14 @@ export function CapacityForm({ event }: { event: Schemas['Event'] }) {
       className="flex flex-wrap items-end gap-2"
       onSubmit={(submitted) => {
         submitted.preventDefault();
-        const value = new FormData(submitted.currentTarget).get('capacity');
+        const form = submitted.currentTarget;
+        const value = new FormData(form).get('capacity');
         change.mutate(Number(typeof value === 'string' ? value : ''), {
           onSuccess: (updated) => toast.success(`Capacity is now ${updated.capacity}.`),
           onError: (error) => {
             showProblem(error, 'change-capacity');
+            // Show the capacity the event still has, not the refused one.
+            form.reset();
           },
         });
       }}
