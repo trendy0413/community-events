@@ -8,6 +8,7 @@ describe('lost connection detection', () => {
     expect(isLostConnection(new Error('Connection terminated unexpectedly'))).toBe(true);
     expect(isLostConnection(new Error('Client has encountered a connection error and is not queryable'))).toBe(true);
     expect(isLostConnection(withCode('ECONNRESET'))).toBe(true);
+    expect(isLostConnection(new Error('Authentication timed out'))).toBe(true);
     expect(isLostConnection(withCode('57P01', 'terminating connection due to administrator command'))).toBe(true);
   });
 
