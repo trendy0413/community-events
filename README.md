@@ -117,3 +117,20 @@ From git timestamps (planning and the first spec draft before the first commit a
 | [test/integration/](test/integration) | Race, lock-wait, workflow, permission and privacy tests on real PostgreSQL |
 | [openapi/openapi.json](openapi/openapi.json) | The API contract, generated from the route schemas |
 | [web/](web) | The web client and the proof page |
+
+## Evidence
+
+From [CI run #30](https://github.com/trendy0413/community-events/actions/runs/40523752667) on commit `2cbf781`, 2026-10-27:
+
+| Check | Result |
+|---|---|
+| API tests on PostgreSQL 16 (unit and integration, 18 files) | 105 passed |
+| The same tests on the `docker-compose.yml` database (the README's Docker path) | 105 passed |
+| Mutants: deliberate breaks of R1-R7 | 7 of 7 caught |
+| Tests the SPEC lists by rule ID | 40 of 40 exist |
+| OpenAPI contract | valid, matches the routes |
+| Web client: lint (with the W1 rule), format, types, generated types, build | passed |
+| Web logic tests (proof page, error wording, client) | 14 passed |
+| Windows: lint, typecheck, contract, unit tests | 41 passed |
+
+On the live demo the same day: the proof page gave 10 seats, 40 "full" and "No overbooking" on runs in a row; the cancel panel freed one seat once and gave it to exactly one of 39; all 20 permission checks matched the SPEC. The [nightly job](https://github.com/trendy0413/community-events/actions/workflows/demo-ops.yml) checks the live counts against the active registrations, resets the data, and checks again.
