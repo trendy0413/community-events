@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import helmet from '@fastify/helmet';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import Fastify from 'fastify';
@@ -81,7 +82,18 @@ export async function buildApp(options: AppOptions) {
     transform: jsonSchemaTransform,
     transformObject,
   });
-  await app.register(swaggerUi, { routePrefix: '/docs' });
+  // Security headers on every response. The API serves JSON only, so its
+  // content policy allows nothing. Swagger UI sets a policy of its own that
+  // lets its scripts run; its renderer also sets inline styles, which are
+  // allowed there (styles cannot run code).
+  await app.register(helmet, {
+    contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] } },
+  });
+  await app.register(swaggerUi, {
+    routePrefix: '/docs',
+    staticCSP: true,
+    transformStaticCSP: (header) => header.replace("style-src 'self' https:", "style-src 'self' https: 'unsafe-inline'"),
+  });
   // The contract at a stable path, for client generators (SPEC section 6).
   app.get('/openapi.json', { schema: { hide: true } }, () => app.swagger());
 

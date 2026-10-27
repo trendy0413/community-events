@@ -140,4 +140,14 @@ describe('docs', () => {
     const contract = await server.inject({ method: 'GET', url: '/openapi.json' });
     expect(contract.json()).toMatchObject({ openapi: '3.1.0' });
   });
+
+  it('sends security headers: nothing may load from an API answer, Swagger UI runs only its own scripts', async () => {
+    const server = await appWithTestRoutes();
+
+    const answer = await server.inject({ method: 'GET', url: '/v1/test/full' });
+    expect(answer.headers['content-security-policy']).toBe("default-src 'none';frame-ancestors 'none'");
+    expect(answer.headers['x-content-type-options']).toBe('nosniff');
+    const docs = await server.inject({ method: 'GET', url: '/docs' });
+    expect(docs.headers['content-security-policy']).toContain("script-src 'self' ;");
+  });
 });
