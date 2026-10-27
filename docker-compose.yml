@@ -1,16 +1,65 @@
+# `docker compose up --build` runs everything: the database, a one-off setup
+# (migrations and fresh demo data), the API and the web client. Only Docker is
+# needed. `npm run db:up` still starts the database alone for local work.
+#
+# Local use only: the values below are not secrets, and every port is bound
+# to the host's loopback, because the API runs the dev identity stub.
+
+x-database-url: &database-url postgres://community_events:community_events@db:5432/community_events
+
 services:
   db:
     image: postgres:16-alpine
     environment:
-      # Local development only. These values are not secrets.
       POSTGRES_USER: community_events
       POSTGRES_PASSWORD: community_events
       POSTGRES_DB: community_events
     ports:
-      # Loopback only, and below 49152: Windows often reserves ports above it.
+      # Below 49152: Windows often reserves ports above it.
       - "127.0.0.1:15432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U community_events"]
       interval: 2s
       timeout: 5s
       retries: 20
+
+  # Runs once per `up` and exits: applies the migrations, then wipes and loads
+  # the demo data (SPEC W5), so each start looks like the live demo. This is
+  # the database `npm run db:up` starts too: data made there by hand is replaced.
+  setup:
+    build: .
+    image: community-events-api:local
+    # demo:reset applies the migrations first.
+    command: ["npm", "run", "demo:reset"]
+    environment:
+      DATABASE_URL: *database-url
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    # The same image as setup; the second build comes from the cache.
+    build: .
+    image: community-events-api:local
+    environment:
+      DATABASE_URL: *database-url
+      LOG_LEVEL: info
+      # Optional error tracking (SPEC O2): set SENTRY_DSN in your shell.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: docker
+    ports:
+      # The API and Swagger UI directly; the web client forwards to it too.
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      api:
+        condition: service_healthy

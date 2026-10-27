@@ -67,6 +67,61 @@ jobs:
       - run: npm run seed
       - run: npm test
 
+  # The one-command run (SPEC section 15): `docker compose up --build` on a
+  # fresh clone, then the same outside checks as the live demo, through the
+  # web client's port.
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: docker compose up
+        run: docker compose up --build --detach
+      - name: Wait for the web client to reach the API
+        run: |
+          for attempt in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8080/v1/health && exit 0
+            sleep 3
+          done
+          docker compose ps --all
+          exit 1
+      - name: The web client, its script and its routes load
+        run: |
+          page=$(curl -fsS http://127.0.0.1:8080/)
+          echo "$page" | grep -q '<div id="root">'
+          # The fallback would answer index.html for a missing file too, so
+          # check the bundle the page loads is real JavaScript.
+          script=$(echo "$page" | grep -o 'src="/assets/[^"]*\.js"' | head -1 | cut -d'"' -f2)
+          echo "script: $script"
+          curl -fsS -o /dev/null -w '%{content_type}\n' "http://127.0.0.1:8080$script" | grep -q javascript
+          curl -fsS http://127.0.0.1:8080/proof | grep -q '<div id="root">'
+          curl -fsS http://127.0.0.1:8080/docs/ | grep -qi 'swagger'
+      - name: The API keeps the request id nginx gave it (O1)
+        run: |
+          id=$(curl -fsS -D - -o /dev/null http://127.0.0.1:8080/v1/health | tr -d '\r' | awk -F': ' 'tolower($1) == "x-request-id" { print $2 }')
+          echo "request id: $id"
+          [[ "$id" =~ ^[0-9a-f]{32}$ ]]
+          docker compose logs api | grep -q "\"reqId\":\"$id\""
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Outside checks, as on the live demo
+        run: npm run smoke
+        env:
+          SMOKE_URL: http://127.0.0.1:8080
+      - name: Count check against the compose database (O3)
+        run: npm run check:counts
+        env:
+          DATABASE_URL: postgres://community_events:community_events@127.0.0.1:15432/community_events
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop
+        if: always()
+        run: docker compose down --volumes
+
   web:
     runs-on: ubuntu-latest
     timeout-minutes: 10
