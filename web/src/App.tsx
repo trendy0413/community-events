@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppShell } from './components/AppShell';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { StartPage } from './pages/StartPage';
+import { ProofPage } from './proof/ProofPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,6 +19,7 @@ const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       { path: '/', element: <StartPage /> },
+      { path: '/proof', element: <ProofPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

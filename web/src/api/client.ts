@@ -45,7 +45,7 @@ export class ApiError extends Error {
   }
 }
 
-function isProblem(value: unknown): value is Problem {
+export function isProblem(value: unknown): value is Problem {
   return typeof value === 'object' && value !== null && 'code' in value && 'status' in value;
 }
 
