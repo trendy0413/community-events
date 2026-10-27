@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
 import helmet from '@fastify/helmet';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
@@ -12,7 +13,7 @@ import {
 import type { AuthMode, Config } from '../config.js';
 import type { Db } from '../db/client.js';
 import { healthRoutes } from '../modules/health/routes.js';
-import { frameworkErrors, registerErrorHandling } from './errors.js';
+import { frameworkErrors, registerErrorHandling, type ReportError } from './errors.js';
 import { transformObject } from './openapi.js';
 import { v1Routes } from './v1.js';
 
@@ -21,6 +22,19 @@ export interface AppOptions {
   /** Must be given on purpose; there is no default (R9). */
   authMode: AuthMode;
   logLevel?: Config['logLevel'];
+  /** Where log lines go. Defaults to stdout; tests read them back (O1). */
+  logStream?: { write: (line: string) => void };
+  /** Sends server errors to the error tracker (O2). Defaults to nothing. */
+  reportError?: ReportError;
+}
+
+// O1: a proxy's request id is kept so its log and ours link up, but only in
+// a plain form; anything else could forge or break log lines.
+const SAFE_REQUEST_ID = /^[\w.:-]{1,128}$/;
+
+function requestId(request: IncomingMessage): string {
+  const incoming = request.headers['x-request-id'];
+  return typeof incoming === 'string' && SAFE_REQUEST_ID.test(incoming) ? incoming : randomUUID();
 }
 
 // The type already limits authMode; this also stops an entry file that
@@ -36,15 +50,17 @@ export async function buildApp(options: AppOptions) {
     logger: {
       level: options.logLevel ?? 'info',
       redact: ['req.headers.authorization', 'req.headers["x-dev-user-id"]'],
+      ...(options.logStream ? { stream: options.logStream } : {}),
     },
-    genReqId: () => randomUUID(),
+    // Every line logged through request.log carries this id as reqId (O1).
+    genReqId: requestId,
     frameworkErrors,
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.decorateRequest('actor', null);
-  registerErrorHandling(app);
+  registerErrorHandling(app, options.reportError);
 
   // Some HTTP clients, several mobile ones among them, send
   // "Content-Type: application/json" on a PUT or DELETE with no body. Register

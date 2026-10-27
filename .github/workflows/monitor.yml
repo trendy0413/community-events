@@ -1,0 +1,51 @@
+name: Monitor
+
+# Light monitoring for the live demo (SPEC section 15): one uptime check and
+# one count alert. A failed run is the alert: GitHub emails whoever last
+# changed this schedule. Every 30 minutes, not every minute: the free demo
+# database sleeps when idle, and each check wakes it. GitHub pauses schedules
+# after 60 days without commits; production adds an outside uptime service.
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: monitor
+
+jobs:
+  uptime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: /v1/health answers 200
+        env:
+          URL: https://community-events-web.vercel.app/v1/health
+        run: |
+          # A sleeping database can take a few seconds to wake.
+          for attempt in 1 2 3 4 5; do
+            status=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL" || true)
+            [ "$status" = 200 ] && echo "up" && exit 0
+            echo "attempt $attempt: status $status"
+            sleep 10
+          done
+          echo "::error::$URL did not answer 200"
+          exit 1
+
+  counts:
+    needs: uptime
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Every event's and slot's count equals its rows (O3)
+        run: npm run check:counts
+        env:
+          DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL_UNPOOLED }}

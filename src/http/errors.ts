@@ -1,5 +1,5 @@
 import { STATUS_CODES } from 'node:http';
-import type { FastifyInstance, FastifyReply, FastifyServerOptions } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest, FastifyServerOptions } from 'fastify';
 import { hasZodFastifySchemaValidationErrors, isResponseSerializationError } from 'fastify-type-provider-zod';
 
 // The codes and statuses from SPEC section 7. Clients switch on `code`, so
@@ -83,14 +83,42 @@ function frameworkErrorCode(error: unknown): string | undefined {
  * the normal error handler. Same shape and headers as every other error.
  */
 export const frameworkErrors: NonNullable<FastifyServerOptions['frameworkErrors']> = (error, request, reply) => {
+  // The onRequest hook never runs for these, so its headers are set here (O1).
+  void reply.header('x-request-id', request.id);
   if (request.url.startsWith('/v1')) void reply.header('cache-control', 'no-store');
   void send(reply, problem('VALIDATION_FAILED', INVALID_REQUEST, [{ field: 'url', message: error.message }]));
 };
 
-export function registerErrorHandling(app: FastifyInstance): void {
+/** What the error tracker hears about a request that failed on our side (O2). */
+export interface ErrorReport {
+  requestId: string;
+  method: string;
+  /** The route pattern, for example /v1/events/:id, so ids never group apart. */
+  route: string;
+}
+
+/** Sends a server error to the error tracker. Resolves once it is sent or given up. */
+export type ReportError = (error: unknown, report: ErrorReport) => Promise<void>;
+
+export const reportNothing: ReportError = () => Promise.resolve();
+
+export function registerErrorHandling(app: FastifyInstance, reportError: ReportError = reportNothing): void {
   app.setNotFoundHandler((_request, reply) => send(reply, problem('NOT_FOUND', 'This route does not exist.')));
 
-  app.setErrorHandler((error, request, reply) => {
+  const serverError = async (error: unknown, request: FastifyRequest, reply: FastifyReply, message: string) => {
+    request.log.error({ err: error }, message);
+    // A tracker that is slow or down must not turn the 500 into a hang.
+    await reportError(error, {
+      requestId: request.id,
+      method: request.method,
+      route: request.routeOptions.url ?? 'unknown route',
+    }).catch((reportFailure: unknown) => {
+      request.log.warn({ err: reportFailure }, 'error report failed');
+    });
+    return send(reply, problem('INTERNAL_ERROR', GENERIC_DETAIL));
+  };
+
+  app.setErrorHandler(async (error, request, reply) => {
     if (error instanceof DomainError) {
       return send(reply, problem(error.code, error.message));
     }
@@ -106,8 +134,7 @@ export function registerErrorHandling(app: FastifyInstance): void {
     // A response that does not match its schema is a server bug: never send
     // the partial body, and log the cause for us, not the client.
     if (isResponseSerializationError(error)) {
-      request.log.error({ err: error }, 'response did not match its schema');
-      return send(reply, problem('INTERNAL_ERROR', GENERIC_DETAIL));
+      return serverError(error, request, reply, 'response did not match its schema');
     }
 
     // Fastify's own request errors (bad JSON, wrong content type, body too
@@ -117,7 +144,6 @@ export function registerErrorHandling(app: FastifyInstance): void {
       return send(reply, problem('VALIDATION_FAILED', INVALID_REQUEST, [{ field: 'request', message: error.message }]));
     }
 
-    request.log.error({ err: error }, 'unhandled error');
-    return send(reply, problem('INTERNAL_ERROR', GENERIC_DETAIL));
+    return serverError(error, request, reply, 'unhandled error');
   });
 }

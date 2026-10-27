@@ -13,6 +13,12 @@ const EnvSchema = z.object({
   HOST: z.string().min(1).default('127.0.0.1'),
   DATABASE_URL: z.url().default(LOCAL_DATABASE_URL),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+  // Optional error tracking (O2). An empty value, as an unset variable in a
+  // compose file gives, means off.
+  SENTRY_DSN: z.preprocess((value) => (value === '' ? undefined : value), z.url().optional()),
+  SENTRY_ENVIRONMENT: z.string().min(1).optional(),
+  // Set by the demo host on each deploy; tags errors with the commit.
+  VERCEL_GIT_COMMIT_SHA: z.string().min(1).optional(),
 });
 
 export interface Config {
@@ -20,6 +26,7 @@ export interface Config {
   host: string;
   databaseUrl: string;
   logLevel: (typeof LOG_LEVELS)[number];
+  sentry?: { dsn: string; environment: string; release?: string };
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -28,8 +35,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     // Fail at startup, not on the first request that needs the value.
     throw new Error(`Invalid environment:\n${z.prettifyError(parsed.error)}`);
   }
-  const { PORT, HOST, DATABASE_URL, LOG_LEVEL } = parsed.data;
-  return { port: PORT, host: HOST, databaseUrl: DATABASE_URL, logLevel: LOG_LEVEL };
+  const { PORT, HOST, DATABASE_URL, LOG_LEVEL, SENTRY_DSN, SENTRY_ENVIRONMENT, VERCEL_GIT_COMMIT_SHA } = parsed.data;
+  return {
+    port: PORT,
+    host: HOST,
+    databaseUrl: DATABASE_URL,
+    logLevel: LOG_LEVEL,
+    ...(SENTRY_DSN
+      ? {
+          sentry: {
+            dsn: SENTRY_DSN,
+            environment: SENTRY_ENVIRONMENT ?? 'development',
+            ...(VERCEL_GIT_COMMIT_SHA ? { release: VERCEL_GIT_COMMIT_SHA } : {}),
+          },
+        }
+      : {}),
+  };
 }
 
 /** The only identity mode this build has: the dev stub (SPEC section 9). */

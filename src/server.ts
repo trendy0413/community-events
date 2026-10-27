@@ -10,8 +10,18 @@ import { buildApp } from './http/app.js';
 
 // Throws before anything starts when AUTH_MODE is missing (R9).
 const config = loadServerConfig();
+// Started before the app, so errors during startup are caught too (O2).
+// Loaded only when configured: without a DSN the SDK never enters the process.
+const reportError = config.sentry
+  ? (await import('./observability/sentry.js')).startSentry(config.sentry)
+  : undefined;
 const db = createDb(config.databaseUrl);
-const app = await buildApp({ db, authMode: config.authMode, logLevel: config.logLevel });
+const app = await buildApp({
+  db,
+  authMode: config.authMode,
+  logLevel: config.logLevel,
+  ...(reportError ? { reportError } : {}),
+});
 app.addHook('onClose', () => db.destroy());
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

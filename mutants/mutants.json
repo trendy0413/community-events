@@ -108,5 +108,25 @@
     "replace": "    .set((eb) => ({ booked_count: eb('booked_count', '-', 1) }))\n    .where('id', '=', slotId)\n",
     "tests": ["test/integration/supply.test.ts"],
     "pattern": "S3 "
+  },
+  {
+    "id": "M12",
+    "rule": "O3",
+    "breaks": "the count check counts cancelled registrations too",
+    "file": "src/db/count-drift.ts",
+    "find": ".leftJoin('registrations as r', (join) => join.onRef('r.event_id', '=', 'e.id').on('r.status', '=', 'active'))",
+    "replace": ".leftJoin('registrations as r', (join) => join.onRef('r.event_id', '=', 'e.id'))",
+    "tests": ["test/integration/count-drift.test.ts"],
+    "pattern": "O3 "
+  },
+  {
+    "id": "M13",
+    "rule": "O3",
+    "breaks": "the count check counts cancelled orders too",
+    "file": "src/db/count-drift.ts",
+    "find": ".leftJoin('orders as o', (join) => join.onRef('o.slot_id', '=', 's.id').on('o.status', '<>', 'cancelled'))",
+    "replace": ".leftJoin('orders as o', (join) => join.onRef('o.slot_id', '=', 's.id'))",
+    "tests": ["test/integration/count-drift.test.ts"],
+    "pattern": "O3 "
   }
 ]

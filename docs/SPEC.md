@@ -114,7 +114,7 @@ Data-model constraints have no rule ID of their own: they back up the rules in t
 
 **Changing `/v1`:** responses may gain fields, so clients must ignore fields they do not know. The contract (`openapi/openapi.json`) allows extra response fields for that reason. Removing or renaming a field, or changing its meaning, needs a new version. Request bodies are the other way round: unknown fields are rejected (R10). The R6 leak tests call every endpoint, as an attendee and as an organizer, and fail if a route the server answers is missing from their list.
 
-Every `/v1` response sends `Cache-Control: no-store`, so seat counts are never cached by a browser or a proxy.
+Every `/v1` response sends `Cache-Control: no-store`, so seat counts are never cached by a browser or a proxy. Every response also carries an `X-Request-Id` header (O1, section 15).
 
 **Event**
 
@@ -320,6 +320,7 @@ The brief does not require a frontend. The web client is built after the backend
 - R7 has a passing test.
 - The committed `openapi/openapi.json` matches the code (CI checks this).
 - W1-W6 are checked as their table in section 10 says.
+- O1-O3 have passing tests, and `docker compose up --build` serves the web client and the API on a fresh clone (CI checks both).
 - On the live demo, the proof page shows "No overbooking" on two runs in a row.
 
 **End-to-end check:**
@@ -423,3 +424,17 @@ The same mechanisms as section 8:
 - **Claim:** one `UPDATE orders SET status = 'claimed', driver_id = $2 ... WHERE id = $1 AND status = 'booked' AND driver_id IS NULL`. Under READ COMMITTED a second claim waits for the first, re-checks its `WHERE`, and matches nothing. Then read the order: mine means 200 (a retry), another driver's means `JOB_TAKEN`, cancelled or delivered means `JOB_NOT_OPEN`.
 - **Deliver:** one `UPDATE ... SET status = 'delivered' WHERE id = $1 AND driver_id = $2 AND status = 'claimed'`; if nothing matched, read the order to tell a retry (already delivered, 200) from someone else's job (`FORBIDDEN`).
 - `CHECK` constraints back up each step: `booked_count` between 0 and capacity, and `driver_id` set exactly when the status is `claimed` or `delivered`.
+
+## 15. Running and monitoring (beyond the brief)
+
+**One command.** `docker compose up --build` starts the database, loads the demo data (the same reset as W5, which applies the migrations first), then starts the API and the web client. Nothing but Docker is needed. The web client is on `http://localhost:8080` and forwards `/v1`, `/docs` and `/openapi.json` to the API, like the live demo. Each start loads fresh demo data into the same database `npm run db:up` starts, so it replaces data made by hand there. (The reset still refuses a database with people outside the seed file.)
+
+**Light monitoring, enough for an MVP.** Errors go to Sentry, every log line of a request carries its request id, one uptime check calls `/v1/health`, and one alert fires when a stored count differs from its rows. No tracing, metrics stack or dashboards yet.
+
+| ID | Rule | Why | Test |
+|---|---|---|---|
+| O1 | Every response carries an `X-Request-Id` header, and every log line written while handling that request carries the same id (`reqId`). An incoming `X-Request-Id` of 1-128 letters, digits, `.`, `_`, `:` or `-` is kept, so a proxy's id links its log to ours; anything else is replaced by a new UUID. An id a client sets is not checked for uniqueness: it links lines, it does not prove where they came from. | A user's error report, a proxy log and our log line must point at the same request. A raw header copied into the log could forge log lines. | `O1 every response carries a request id`, `O1 every log line of a request carries its request id`, `O1 a safe incoming request id is kept and any other is replaced` |
+| O2 | A request that ends in a 500 is reported to the error tracker with its request id, method and route, and without headers or the body. Answers the client caused (4xx) are not reported. Without `SENTRY_DSN` the server reports nothing and only logs. | A server bug must reach us even when no one reads the logs. Client mistakes would bury it. Headers hold the identity. | `O2 an unexpected error is reported with its request id`, `O2 client errors are not reported`, `O2 error reports leave out the request and the user` |
+| O3 | The count check (`npm run check:counts`) lists every event whose `registered_count` differs from its active registrations, and every delivery slot whose `booked_count` differs from its orders that are not cancelled. It exits 1 when it finds any. | R1, R3 and S1 depend on the stored counts. A mismatch means a bug or a manual edit, and must raise an alert, not wait for a customer. | `O3 the count check passes when every count matches`, `O3 the count check names an event whose count differs`, `O3 the count check names a slot whose count differs` (mutants M12 and M13 make it count cancelled rows; a test must fail) |
+
+**Where the alerts go.** A scheduled GitHub workflow (`.github/workflows/monitor.yml`) runs every 30 minutes: it calls `/v1/health` on the live demo, then runs the count check on its database. A failed run is the alert: GitHub emails the person who last changed the workflow's schedule (here the repository owner), if their Actions notifications are on. Every 30 minutes, not every minute, because the free demo database sleeps when idle and each check wakes it. Limits, accepted for a demo: GitHub may run a schedule late, and it pauses schedules in a repository with no commits for 60 days, without an alert. Production adds an outside uptime service (Sentry's or another) that checks every minute.
