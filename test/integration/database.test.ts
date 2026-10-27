@@ -1,8 +1,8 @@
 import { sql } from 'kysely';
 import { afterAll, describe, expect, inject, it } from 'vitest';
 import { migrate } from '../../src/db/migrate.js';
-import { loadSeedData, seed } from '../../src/db/seed.js';
-import { testDb } from './helpers.js';
+import { loadSeedData, seed, seedPeople } from '../../src/db/seed.js';
+import { seatCounts, testDb } from './helpers.js';
 
 const db = testDb();
 afterAll(() => db.destroy());
@@ -24,7 +24,8 @@ describe('database', () => {
     await seed(db, now);
     await seed(db, now);
 
-    const { people, events } = loadSeedData();
+    const data = loadSeedData();
+    const [people, events] = [seedPeople(data), data.events];
     const seededPeople = await db
       .selectFrom('users')
       .select('id')
@@ -40,7 +41,11 @@ describe('database', () => {
     expect(seededEvents).toHaveLength(events.length);
     for (const event of seededEvents) {
       expect(event.starts_at.getTime()).toBeGreaterThan(now.getTime());
-      expect(event.registered_count).toBe(0);
+      // Seeding never changes a seat count; other test files may have taken seats.
+      expect(await seatCounts(db, event.id)).toEqual({
+        registeredCount: event.registered_count,
+        activeRows: event.registered_count,
+      });
     }
   });
 });

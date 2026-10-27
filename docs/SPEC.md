@@ -283,7 +283,7 @@ The brief does not require a frontend. The web client is built after the backend
 | W2 | The person switcher (the menu that picks a demo person) changes who you are, never what you may do. The server decides. | The web client only sends the identity header. The permission tests (R5, R6) prove the server decides. |
 | W3 | Each run on the proof page ("Try to overbook it") creates its own event, so runs from different visitors never mix. | `W3 each proof run creates its own event` |
 | W4 | The "No overbooking" badge shows only when three numbers equal the capacity: successful registrations, the event's `registeredCount`, and the active rows in the attendee list. This only displays numbers the server returned. It is not a business rule (W1). | `W4 badge shows only when all three counts equal the capacity` |
-| W5 | The demo holds only seeded fake people (`@example.com`). It has no sign-up. A reset script (`scripts/demo-reset.ts`) wipes and re-seeds the data. | `W5 seed data holds only @example.com people` |
+| W5 | The demo holds only seeded fake people (`@example.com`). It has no sign-up. A reset script (`npm run demo:reset`) wipes and re-seeds the data. It refuses a database that holds anyone outside the seed file. | `W5 seed data holds only @example.com people`, `W5 demo reset refuses a database with people outside the seed file`, `W5 demo reset wipes the data and seeds it again` |
 
 ## 11. Assumptions
 

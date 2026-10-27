@@ -31,6 +31,64 @@
       "roles": ["admin"]
     }
   ],
+  "proofOrganizer": {
+    "id": "0d3c2f6e-1a1b-4c00-8a01-000000000006",
+    "name": "Proof organizer",
+    "email": "proof@example.com",
+    "roles": ["organizer"]
+  },
+  "crowd": [
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000001", "name": "Crowd 01", "email": "crowd01@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000002", "name": "Crowd 02", "email": "crowd02@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000003", "name": "Crowd 03", "email": "crowd03@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000004", "name": "Crowd 04", "email": "crowd04@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000005", "name": "Crowd 05", "email": "crowd05@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000006", "name": "Crowd 06", "email": "crowd06@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000007", "name": "Crowd 07", "email": "crowd07@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000008", "name": "Crowd 08", "email": "crowd08@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000009", "name": "Crowd 09", "email": "crowd09@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000010", "name": "Crowd 10", "email": "crowd10@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000011", "name": "Crowd 11", "email": "crowd11@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000012", "name": "Crowd 12", "email": "crowd12@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000013", "name": "Crowd 13", "email": "crowd13@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000014", "name": "Crowd 14", "email": "crowd14@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000015", "name": "Crowd 15", "email": "crowd15@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000016", "name": "Crowd 16", "email": "crowd16@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000017", "name": "Crowd 17", "email": "crowd17@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000018", "name": "Crowd 18", "email": "crowd18@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000019", "name": "Crowd 19", "email": "crowd19@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000020", "name": "Crowd 20", "email": "crowd20@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000021", "name": "Crowd 21", "email": "crowd21@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000022", "name": "Crowd 22", "email": "crowd22@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000023", "name": "Crowd 23", "email": "crowd23@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000024", "name": "Crowd 24", "email": "crowd24@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000025", "name": "Crowd 25", "email": "crowd25@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000026", "name": "Crowd 26", "email": "crowd26@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000027", "name": "Crowd 27", "email": "crowd27@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000028", "name": "Crowd 28", "email": "crowd28@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000029", "name": "Crowd 29", "email": "crowd29@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000030", "name": "Crowd 30", "email": "crowd30@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000031", "name": "Crowd 31", "email": "crowd31@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000032", "name": "Crowd 32", "email": "crowd32@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000033", "name": "Crowd 33", "email": "crowd33@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000034", "name": "Crowd 34", "email": "crowd34@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000035", "name": "Crowd 35", "email": "crowd35@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000036", "name": "Crowd 36", "email": "crowd36@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000037", "name": "Crowd 37", "email": "crowd37@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000038", "name": "Crowd 38", "email": "crowd38@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000039", "name": "Crowd 39", "email": "crowd39@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000040", "name": "Crowd 40", "email": "crowd40@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000041", "name": "Crowd 41", "email": "crowd41@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000042", "name": "Crowd 42", "email": "crowd42@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000043", "name": "Crowd 43", "email": "crowd43@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000044", "name": "Crowd 44", "email": "crowd44@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000045", "name": "Crowd 45", "email": "crowd45@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000046", "name": "Crowd 46", "email": "crowd46@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000047", "name": "Crowd 47", "email": "crowd47@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000048", "name": "Crowd 48", "email": "crowd48@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000049", "name": "Crowd 49", "email": "crowd49@example.com", "roles": ["attendee"]},
+    {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000050", "name": "Crowd 50", "email": "crowd50@example.com", "roles": ["attendee"]}
+  ],
   "events": [
     {
       "id": "6f1c0e2a-7b3d-4e00-9b02-000000000001",
@@ -39,7 +97,8 @@
       "description": "Bring a game, or learn a new one. Snacks provided.",
       "startsInDays": 5,
       "timezone": "America/New_York",
-      "capacity": 10
+      "capacity": 10,
+      "crowdRegistrations": 7
     },
     {
       "id": "6f1c0e2a-7b3d-4e00-9b02-000000000002",
@@ -48,7 +107,8 @@
       "description": "A small hands-on class. All materials included.",
       "startsInDays": 3,
       "timezone": "America/New_York",
-      "capacity": 2
+      "capacity": 2,
+      "crowdRegistrations": 1
     },
     {
       "id": "6f1c0e2a-7b3d-4e00-9b02-000000000003",
@@ -57,7 +117,8 @@
       "description": "Gloves and bags provided. Meet at the main gate.",
       "startsInDays": 12,
       "timezone": "America/Chicago",
-      "capacity": 25
+      "capacity": 25,
+      "crowdRegistrations": 12
     }
   ]
 }

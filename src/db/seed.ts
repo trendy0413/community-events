@@ -1,37 +1,63 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { type Kysely, sql } from 'kysely';
 import { z } from 'zod';
+import { register } from '../modules/registrations/service.js';
 import type { Db } from './client.js';
-import { ROLES } from './schema.js';
+import { ROLES, type Database } from './schema.js';
 
 const SEED_FILE = path.resolve(import.meta.dirname, '../../seed/personas.json');
 
-const SeedSchema = z.object({
-  people: z.array(
-    z.object({
-      id: z.uuid(),
-      name: z.string().min(1),
-      email: z.email(),
-      roles: z.array(z.enum(ROLES)).min(1),
-    }),
-  ),
-  events: z.array(
-    z.object({
-      id: z.uuid(),
-      organizerId: z.uuid(),
-      title: z.string().min(3).max(80),
-      description: z.string().max(500),
-      startsInDays: z.number().int().min(1).max(300),
-      timezone: z.string().min(1),
-      capacity: z.number().int().min(1).max(500),
-    }),
-  ),
+const Person = z.object({
+  id: z.uuid(),
+  name: z.string().min(1),
+  email: z.email(),
+  roles: z.array(z.enum(ROLES)).min(1),
 });
+
+const SeedSchema = z
+  .object({
+    /** The people a visitor can switch between. */
+    people: z.array(Person),
+    /** Owns the events that proof runs create, so they stay apart from the people's own. */
+    proofOrganizer: Person,
+    /** Attendees for proof runs and for the seats the demo reset takes. */
+    crowd: z.array(Person),
+    events: z.array(
+      z.object({
+        id: z.uuid(),
+        organizerId: z.uuid(),
+        title: z.string().min(3).max(80),
+        description: z.string().max(500),
+        startsInDays: z.number().int().min(1).max(300),
+        timezone: z.string().min(1),
+        capacity: z.number().int().min(1).max(500),
+        /** Seats the demo reset takes, by the first crowd members. */
+        crowdRegistrations: z.number().int().min(0),
+      }),
+    ),
+  })
+  .superRefine((data, ctx) => {
+    data.events.forEach((event, index) => {
+      if (event.crowdRegistrations > Math.min(event.capacity, data.crowd.length)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['events', index, 'crowdRegistrations'],
+          message: 'Must fit the capacity and the crowd',
+        });
+      }
+    });
+  });
 
 export type SeedData = z.infer<typeof SeedSchema>;
 
 export function loadSeedData(): SeedData {
   return SeedSchema.parse(JSON.parse(readFileSync(SEED_FILE, 'utf8')));
+}
+
+/** Every user in the seed file. */
+export function seedPeople(data: SeedData): SeedData['people'] {
+  return [...data.people, data.proofOrganizer, ...data.crowd];
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -44,50 +70,96 @@ const HOUR_MS = 60 * 60 * 1000;
  */
 export async function seed(db: Db, now: Date = new Date()): Promise<{ people: number; events: number }> {
   const data = loadSeedData();
+  await db.transaction().execute((trx) => upsertSeedRows(trx, data, now));
+  return { people: seedPeople(data).length, events: data.events.length };
+}
+
+export interface ResetResult {
+  people: number;
+  events: number;
+  registrations: number;
+}
+
+/**
+ * Empties the demo database and seeds it again, then takes each event's
+ * `crowdRegistrations` seats. Refuses to run when the database holds a user
+ * who is not in the seed file: the demo has no sign-up, so such a user means
+ * this is not a demo database.
+ */
+export async function resetDemo(db: Db, now: Date = new Date()): Promise<ResetResult> {
+  const data = loadSeedData();
+  const people = seedPeople(data);
+
+  // One transaction: if any step fails, the old data stays. TRUNCATE locks
+  // the tables, so API requests wait instead of seeing them half filled.
+  await db.transaction().execute(async (trx) => {
+    const stranger = await trx
+      .selectFrom('users')
+      .select('id')
+      .where('id', 'not in', people.map((person) => person.id))
+      .limit(1)
+      .executeTakeFirst();
+    if (stranger) {
+      throw new Error('demo reset: this database has users that are not in seed/personas.json, so it is not wiped');
+    }
+    // All three tables at once: TRUNCATE skips the no-delete trigger on
+    // registrations, and emptying them together keeps the counts and the
+    // rows in step (SPEC section 5).
+    await sql`TRUNCATE registrations, events, users`.execute(trx);
+    await upsertSeedRows(trx, data, now);
+  });
+
+  // Through the registration service, the only code that changes
+  // registered_count. Different people and events, so these run in parallel.
+  const seats = data.events.flatMap((event) =>
+    data.crowd.slice(0, event.crowdRegistrations).map((person) => ({ eventId: event.id, attendeeId: person.id })),
+  );
+  await Promise.all(seats.map(({ eventId, attendeeId }) => register(db, eventId, attendeeId)));
+
+  return { people: people.length, events: data.events.length, registrations: seats.length };
+}
+
+async function upsertSeedRows(db: Kysely<Database>, data: SeedData, now: Date): Promise<void> {
   // Whole hours read better on event pages than the second the seed ran.
   const startOfHour = Math.ceil(now.getTime() / HOUR_MS) * HOUR_MS;
 
   // One statement per table: the database may be far away, and each round
   // trip costs more than the rows themselves.
-  await db.transaction().execute(async (trx) => {
-    await trx
-      .insertInto('users')
-      .values(data.people)
-      .onConflict((oc) =>
-        oc.column('id').doUpdateSet((eb) => ({
-          name: eb.ref('excluded.name'),
-          email: eb.ref('excluded.email'),
-          roles: eb.ref('excluded.roles'),
-        })),
-      )
-      .execute();
+  await db
+    .insertInto('users')
+    .values(seedPeople(data))
+    .onConflict((oc) =>
+      oc.column('id').doUpdateSet((eb) => ({
+        name: eb.ref('excluded.name'),
+        email: eb.ref('excluded.email'),
+        roles: eb.ref('excluded.roles'),
+      })),
+    )
+    .execute();
 
-    await trx
-      .insertInto('events')
-      .values(
-        data.events.map((event) => ({
-          id: event.id,
-          organizer_id: event.organizerId,
-          title: event.title,
-          description: event.description,
-          starts_at: new Date(startOfHour + event.startsInDays * DAY_MS),
-          timezone: event.timezone,
-          capacity: event.capacity,
-        })),
-      )
-      // Capacity is left alone on conflict: lowering it below the seats
-      // already taken would break the capacity CHECK.
-      .onConflict((oc) =>
-        oc.column('id').doUpdateSet((eb) => ({
-          title: eb.ref('excluded.title'),
-          description: eb.ref('excluded.description'),
-          starts_at: eb.ref('excluded.starts_at'),
-          timezone: eb.ref('excluded.timezone'),
-          updated_at: new Date(),
-        })),
-      )
-      .execute();
-  });
-
-  return { people: data.people.length, events: data.events.length };
+  await db
+    .insertInto('events')
+    .values(
+      data.events.map((event) => ({
+        id: event.id,
+        organizer_id: event.organizerId,
+        title: event.title,
+        description: event.description,
+        starts_at: new Date(startOfHour + event.startsInDays * DAY_MS),
+        timezone: event.timezone,
+        capacity: event.capacity,
+      })),
+    )
+    // Capacity is left alone on conflict: lowering it below the seats
+    // already taken would break the capacity CHECK.
+    .onConflict((oc) =>
+      oc.column('id').doUpdateSet((eb) => ({
+        title: eb.ref('excluded.title'),
+        description: eb.ref('excluded.description'),
+        starts_at: eb.ref('excluded.starts_at'),
+        timezone: eb.ref('excluded.timezone'),
+        updated_at: new Date(),
+      })),
+    )
+    .execute();
 }

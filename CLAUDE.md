@@ -11,6 +11,7 @@ npm --prefix web install   # web client dependencies
 npm run db:up              # PostgreSQL 16 in Docker on localhost:15432 (or set DATABASE_URL to any PostgreSQL 16)
 npm run migrate            # apply migrations/*.sql
 npm run seed               # demo people and events
+npm run demo:reset         # wipe and re-seed; refuses a database with people outside the seed file
 npm run dev                # API on http://localhost:3000, Swagger UI at /docs
 npm test                   # all tests; without PostgreSQL it stops within seconds with a "needs PostgreSQL 16" message (it never skips)
 npm run test:unit          # tests that need no database
@@ -33,7 +34,7 @@ src/app.ts               buildApp(): plugins, routes, error handler (used by tes
 src/server.ts            starts the server; also the entry file Vercel detects
 src/config.ts            reads and checks environment variables
 src/db/                  pg pool and Kysely instance, table types, migration runner, seed
-seed/personas.json       fixed fake demo people and events
+seed/personas.json       fixed fake demo people, the proof crowd and events
 src/auth/devAuth.ts      dev identity stub (X-Dev-User-Id header)
 src/auth/policy.ts       can(actor, action, resource), deny by default
 src/http/errors.ts       domain errors -> application/problem+json

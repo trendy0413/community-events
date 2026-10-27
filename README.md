@@ -14,9 +14,11 @@ You need **Node.js 24** and **PostgreSQL 16**.
 npm install
 npm run db:up      # PostgreSQL 16 in Docker on localhost:15432
 npm run migrate    # create the tables
-npm run seed       # 5 demo people and 3 events
+npm run seed       # demo people and events from seed/personas.json
 npm run dev        # API on http://localhost:3000, Swagger UI on http://localhost:3000/docs
 ```
+
+`npm run demo:reset` empties the database and seeds it again, with some seats already taken. It refuses to run on a database that holds people outside the seed file.
 
 **No Docker?** Put the connection string of any PostgreSQL 16 database in a `.env` file instead (see [.env.example](.env.example)), and skip `npm run db:up`:
 
