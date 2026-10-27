@@ -43,6 +43,23 @@ jobs:
       - name: Tests (unit + integration on PostgreSQL 16)
         run: npm test
 
+  # The README's Docker path, exactly as written: docker-compose.yml, the
+  # default DATABASE_URL from src/config.ts, migrate, seed, then all tests.
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run db:up
+      - run: npm run migrate
+      - run: npm run seed
+      - run: npm test
+
   web:
     runs-on: ubuntu-latest
     timeout-minutes: 10
