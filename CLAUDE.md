@@ -54,7 +54,7 @@ web/                     React client; has its own CLAUDE.md
 
 - **R1 seat limit lives in SQL:** `UPDATE events ... WHERE registered_count < capacity`, backed by `CHECK (registered_count BETWEEN 0 AND capacity)`. Never count rows and then insert.
 - `registered_count` changes only in the registrations module (`src/modules/registrations/`), inside a transaction that its service opens. Cancel lowers it only when a registration row actually changed (R3).
-- Registrations are never deleted. Their foreign keys use `ON DELETE RESTRICT`, so no delete can change the seat count behind the registration service.
+- Registrations are never deleted. Their foreign keys use `ON DELETE RESTRICT`, so no delete can change the seat count behind the registration service. Only the demo reset and the test setup empty tables, all three in one `TRUNCATE`; never empty one alone.
 - Lock order in every transaction: the registration row first, then the event row.
 - Every `/v1` route except `/v1/health` goes through `can()`. The acting user comes from the identity header, never from the body.
 - Errors use the problem+json shape and the codes in SPEC section 7.

@@ -9,8 +9,8 @@ export function testDb(max?: number): Db {
   return createDb(inject('databaseUrl'), max === undefined ? {} : { max });
 }
 
-// Every helper makes fresh rows with random IDs and emails, so test files can
-// run in parallel on one database without seeing each other's data.
+// Every helper makes fresh rows with random IDs and emails, so tests never see
+// each other's data. (Files still run one at a time: see vitest.config.ts.)
 
 export async function createUser(db: Db, roles: Role[] = ['attendee']): Promise<string> {
   const { id } = await db

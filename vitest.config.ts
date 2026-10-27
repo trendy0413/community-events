@@ -29,7 +29,8 @@ export default defineConfig({
           hookTimeout: 120_000,
           // One file at a time: the race tests load the database on purpose,
           // and on a small server that load slowed other files' tests into
-          // their timeouts. Tests inside a file still run their own races.
+          // their timeouts. The demo reset test also empties every table.
+          // Tests inside a file still run their own races.
           fileParallelism: false,
         },
       },

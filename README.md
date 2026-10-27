@@ -39,7 +39,7 @@ There is no sign-up yet. A dev stand-in for sign-in picks a seeded person by id 
 | Ben Carter | attendee | `0d3c2f6e-1a1b-4c00-8a01-000000000004` |
 | Ada Brooks | admin | `0d3c2f6e-1a1b-4c00-8a01-000000000005` |
 
-The seeded event "Intro to pottery" has 2 seats. Ana and Ben take them, and then the event shows 0 seats left:
+After `npm run seed` on a new database, the event "Intro to pottery" has 2 free seats. Ana and Ben take them, and then the event shows 0 seats left. (After `npm run demo:reset`, one seat is already taken, so Ben gets `409 EVENT_FULL`.)
 
 ```bash
 EVENT=6f1c0e2a-7b3d-4e00-9b02-000000000002

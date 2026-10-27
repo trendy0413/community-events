@@ -88,8 +88,8 @@ Data-model constraints have no rule ID of their own: they back up the rules in t
 - `status` (`active` or `cancelled`), `created_at`, `cancelled_at`
 - `cancelled_at` is set exactly when `status` is `cancelled`.
 - Partial unique index on `(event_id, attendee_id) WHERE status = 'active'`. A plain unique index would block registering again after a cancel.
-- Rows are never deleted. A cancelled row stays as history. Registering again creates a new row. A database trigger rejects any `DELETE` on registrations.
-- The foreign keys from registrations to events and users use `ON DELETE RESTRICT`. The app never deletes events or users, so no delete can change the seat count behind the registration service. The demo reset empties all tables in one `TRUNCATE`.
+- Rows are never deleted. A cancelled row stays as history. Registering again creates a new row. A database trigger rejects any `DELETE` on registrations. The one exception is the demo reset (W5) and the test setup: they empty all three tables in one `TRUNCATE`, so counts and rows reach zero together. One table is never emptied alone.
+- The foreign keys from registrations to events and users use `ON DELETE RESTRICT`. The app never deletes events or users, so no delete can change the seat count behind the registration service.
 
 ## 6. API (`/v1`)
 
@@ -234,7 +234,7 @@ A validation error adds `errors`:
 
 ## 8. How the last seat stays safe
 
-The seat count is kept in `events.registered_count`. It changes only inside these transactions.
+The seat count is kept in `events.registered_count`. It changes only inside these transactions. (The demo reset and the test setup remove events with their counts in one `TRUNCATE`, section 5.)
 
 **Register** (one transaction):
 1. `INSERT INTO registrations … ON CONFLICT (event_id, attendee_id) WHERE status = 'active' DO NOTHING RETURNING *`.
@@ -257,7 +257,7 @@ Why this is safe:
 - The same person sending two requests at once: the second `INSERT` waits for the first one's uncommitted row. If the first commits, the second hits the conflict, and its next statement sees the committed row and returns it. If the first rolls back (for example, the event was full), the second continues normally.
 - Register and cancel both lock the registration row first, then the event row. The same order means no deadlocks.
 - The `WHERE` guard gives users a clear `EVENT_FULL` error. The `CHECK` constraint is a backup if future code forgets the guard.
-- The count is kept by the registration service, not by a database trigger. Three things keep it equal to the active rows: it changes only in the transactions above, no delete can bypass them (`ON DELETE RESTRICT`, section 5), and every race test ends by checking that `registered_count` equals the number of active rows. A trigger is the upgrade path if more write paths appear.
+- The count is kept by the registration service, not by a database trigger. Three things keep it equal to the active rows: it changes only in the transactions above, no delete can bypass them (`ON DELETE RESTRICT` and the no-delete trigger; only the demo reset and the test setup empty the tables, all at once, section 5), and every race test ends by checking that `registered_count` equals the number of active rows. A trigger is the upgrade path if more write paths appear.
 - "Check, then insert" (count the rows, then insert) is not used. Two requests can both see one free seat.
 - If the database connection drops during a register or a cancel, the service runs it once more. Both are idempotent, so this is safe. If the first try never committed, the retry does the work. If it did commit, the retry gets the same answer a client retry would: the existing registration (200), or nothing to cancel (204). A retry can never take a second seat or free one twice.
 
@@ -283,7 +283,7 @@ The brief does not require a frontend. The web client is built after the backend
 | W2 | The person switcher (the menu that picks a demo person) changes who you are, never what you may do. The server decides. | The web client only sends the identity header. The permission tests (R5, R6) prove the server decides. |
 | W3 | Each run on the proof page ("Try to overbook it") creates its own event, so runs from different visitors never mix. | `W3 each proof run creates its own event` |
 | W4 | The "No overbooking" badge shows only when three numbers equal the capacity: successful registrations, the event's `registeredCount`, and the active rows in the attendee list. This only displays numbers the server returned. It is not a business rule (W1). | `W4 badge shows only when all three counts equal the capacity` |
-| W5 | The demo holds only seeded fake people (`@example.com`). It has no sign-up. A reset script (`npm run demo:reset`) wipes and re-seeds the data. It refuses a database that holds anyone outside the seed file. | `W5 seed data holds only @example.com people`, `W5 demo reset refuses a database with people outside the seed file`, `W5 demo reset wipes the data and seeds it again` |
+| W5 | The demo holds only seeded fake people (`@example.com`). It has no sign-up. A reset script (`npm run demo:reset`) wipes and re-seeds the data, then takes each seeded event's `crowdRegistrations` seats through the registration service. It refuses a database that holds anyone outside the seed file. If taking the seats fails, run it again. | `W5 seed data holds only @example.com people`, `W5 demo reset refuses a database with people outside the seed file`, `W5 demo reset wipes the data and seeds it again` |
 
 ## 11. Assumptions
 

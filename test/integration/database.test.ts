@@ -20,12 +20,24 @@ describe('database', () => {
   });
 
   it('seeds the demo people and upcoming events, and can run twice', async () => {
+    const data = loadSeedData();
+    const [people, events] = [seedPeople(data), data.events];
+    // Another test file may have seeded and taken seats already. Seeding
+    // itself must never change a count.
+    const countsBefore = new Map(
+      (
+        await db
+          .selectFrom('events')
+          .select(['id', 'registered_count'])
+          .where('id', 'in', events.map((e) => e.id))
+          .execute()
+      ).map((row) => [row.id, row.registered_count]),
+    );
+
     const now = new Date();
     await seed(db, now);
     await seed(db, now);
 
-    const data = loadSeedData();
-    const [people, events] = [seedPeople(data), data.events];
     const seededPeople = await db
       .selectFrom('users')
       .select('id')
@@ -41,7 +53,7 @@ describe('database', () => {
     expect(seededEvents).toHaveLength(events.length);
     for (const event of seededEvents) {
       expect(event.starts_at.getTime()).toBeGreaterThan(now.getTime());
-      // Seeding never changes a seat count; other test files may have taken seats.
+      expect(event.registered_count).toBe(countsBefore.get(event.id) ?? 0);
       expect(await seatCounts(db, event.id)).toEqual({
         registeredCount: event.registered_count,
         activeRows: event.registered_count,

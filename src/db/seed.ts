@@ -85,38 +85,64 @@ export interface ResetResult {
  * `crowdRegistrations` seats. Refuses to run when the database holds a user
  * who is not in the seed file: the demo has no sign-up, so such a user means
  * this is not a demo database.
+ *
+ * The seats are taken after the wipe has committed. If that step fails, the
+ * events are there with fewer seats taken, and running the reset again
+ * fixes it.
  */
 export async function resetDemo(db: Db, now: Date = new Date()): Promise<ResetResult> {
   const data = loadSeedData();
   const people = seedPeople(data);
 
-  // One transaction: if any step fails, the old data stays. TRUNCATE locks
-  // the tables, so API requests wait instead of seeing them half filled.
-  await db.transaction().execute(async (trx) => {
-    const stranger = await trx
-      .selectFrom('users')
-      .select('id')
-      .where('id', 'not in', people.map((person) => person.id))
-      .limit(1)
-      .executeTakeFirst();
-    if (stranger) {
-      throw new Error('demo reset: this database has users that are not in seed/personas.json, so it is not wiped');
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await db.transaction().execute((trx) => wipeAndSeed(trx, data, now));
+      break;
+    } catch (error) {
+      // API requests lock these tables in other orders, so one that arrives
+      // meanwhile can deadlock with the wipe. PostgreSQL then ends one side:
+      // that request gets a 500, or this attempt rolls back and runs again.
+      if (attempt >= WIPE_ATTEMPTS || !isDeadlock(error)) throw error;
     }
-    // All three tables at once: TRUNCATE skips the no-delete trigger on
-    // registrations, and emptying them together keeps the counts and the
-    // rows in step (SPEC section 5).
-    await sql`TRUNCATE registrations, events, users`.execute(trx);
-    await upsertSeedRows(trx, data, now);
-  });
+  }
 
   // Through the registration service, the only code that changes
-  // registered_count. Different people and events, so these run in parallel.
+  // registered_count. Each (event, person) pair is distinct, so no two calls
+  // race for one registration.
   const seats = data.events.flatMap((event) =>
     data.crowd.slice(0, event.crowdRegistrations).map((person) => ({ eventId: event.id, attendeeId: person.id })),
   );
   await Promise.all(seats.map(({ eventId, attendeeId }) => register(db, eventId, attendeeId)));
 
   return { people: people.length, events: data.events.length, registrations: seats.length };
+}
+
+const WIPE_ATTEMPTS = 3;
+const DEADLOCK_DETECTED = '40P01';
+
+function isDeadlock(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === DEADLOCK_DETECTED;
+}
+
+/** One transaction: if any step fails, the old data stays. */
+async function wipeAndSeed(trx: Kysely<Database>, data: SeedData, now: Date): Promise<void> {
+  // Locked first, so no user can be added between the check and the wipe.
+  // API requests wait for the commit instead of seeing half-filled tables.
+  await sql`LOCK TABLE registrations, events, users IN ACCESS EXCLUSIVE MODE`.execute(trx);
+  const stranger = await trx
+    .selectFrom('users')
+    .select('id')
+    .where('id', 'not in', seedPeople(data).map((person) => person.id))
+    .limit(1)
+    .executeTakeFirst();
+  if (stranger) {
+    throw new Error('demo reset: this database has users that are not in seed/personas.json, so it is not wiped');
+  }
+  // All three tables at once: TRUNCATE skips the no-delete trigger on
+  // registrations, and emptying them together keeps the counts and the rows
+  // in step (SPEC section 5).
+  await sql`TRUNCATE registrations, events, users`.execute(trx);
+  await upsertSeedRows(trx, data, now);
 }
 
 async function upsertSeedRows(db: Kysely<Database>, data: SeedData, now: Date): Promise<void> {

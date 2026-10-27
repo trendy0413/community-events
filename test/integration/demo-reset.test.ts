@@ -5,24 +5,33 @@ import { cancel, register } from '../../src/modules/registrations/service.js';
 import { createEvent, createUser, seatCounts, testDb } from './helpers.js';
 
 const db = testDb();
-afterAll(() => db.destroy());
+
+// The reset only runs on a database that holds nothing but seed people, and
+// other test files leave their own people behind. These tests empty every
+// table, before each test and once more at the end, so no seed rows are left
+// for other files (files run one at a time, see vitest.config.ts).
+const emptyAllTables = () => sql`TRUNCATE registrations, events, users`.execute(db);
+beforeEach(async () => {
+  await emptyAllTables();
+});
+afterAll(async () => {
+  await emptyAllTables();
+  await db.destroy();
+});
 
 const data = loadSeedData();
 
 describe('demo reset', () => {
-  // The reset only runs on a database that holds nothing but seed people,
-  // and other test files leave their own people behind.
-  beforeEach(async () => {
-    await sql`TRUNCATE registrations, events, users`.execute(db);
-  });
-
   it('W5 demo reset refuses a database with people outside the seed file', async () => {
-    const stranger = await createUser(db);
+    const stranger = await createUser(db, ['organizer', 'attendee']);
+    const event = await createEvent(db, stranger);
+    await register(db, event, stranger);
 
     await expect(resetDemo(db)).rejects.toThrow('not in seed/personas.json');
 
     const kept = await db.selectFrom('users').select('id').where('id', '=', stranger).executeTakeFirst();
     expect(kept).toEqual({ id: stranger });
+    expect(await seatCounts(db, event)).toEqual({ registeredCount: 1, activeRows: 1 });
   });
 
   it('W5 demo reset wipes the data and seeds it again', async () => {
