@@ -26,7 +26,7 @@ const GUIDE: Record<string, Pick<Persona, 'tryThis' | 'startAt'>> = {
   'omar@example.com': { tryThis: "Another organizer. Try to change one of Olivia's events.", startAt: '/organizer' },
   'ana@example.com': { tryThis: 'Registers for events and cancels.', startAt: '/events' },
   'ben@example.com': { tryThis: 'Another attendee. Race Ana for the last seat.', startAt: '/events' },
-  'ada@example.com': { tryThis: 'Sees every user and who registered. Changes nothing.', startAt: '/events' },
+  'ada@example.com': { tryThis: 'Sees every user and who registered. Changes nothing.', startAt: '/admin' },
 };
 
 export const personas: Persona[] = seed.people.map((person) => ({

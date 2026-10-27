@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppShell } from './components/AppShell';
+import { AdminPage } from './pages/AdminPage';
 import { EventPage } from './pages/EventPage';
 import { EventsPage } from './pages/EventsPage';
 import { MyRegistrationsPage } from './pages/MyRegistrationsPage';
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: '/events/:id', element: <EventPage /> },
       { path: '/me/registrations', element: <MyRegistrationsPage /> },
       { path: '/organizer', element: <OrganizerPage /> },
+      { path: '/admin', element: <AdminPage /> },
       { path: '/proof', element: <ProofPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

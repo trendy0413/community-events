@@ -11,7 +11,8 @@ export type Action =
   | 'change-capacity'
   | 'see-attendees'
   | 'my-registrations'
-  | 'see-users';
+  | 'see-users'
+  | 'see-past';
 
 export interface Explanation {
   /** Plain words for the visitor. */
@@ -31,6 +32,7 @@ const FORBIDDEN: Record<Action, string> = {
   'see-attendees': "Only the event's organizer and admins can see who registered.",
   'my-registrations': 'Only attendees have registrations.',
   'see-users': 'Only admins can see all users.',
+  'see-past': 'Only admins can list events that have started.',
 };
 
 const STARTED: Partial<Record<Action, string>> = {

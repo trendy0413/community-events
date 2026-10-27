@@ -35,7 +35,7 @@ export function useMe() {
   });
 }
 
-export function useEvents(filter: { organizer?: 'me' } = {}) {
+export function useEvents(filter: { organizer?: 'me'; scope?: 'past' } = {}) {
   const person = usePersonKey();
   return useQuery({
     queryKey: [person, 'events', filter],
