@@ -66,9 +66,12 @@ export function explain(error: unknown, action: Action): Explanation {
   else if (code === 'EVENT_STARTED') title = STARTED[action] ?? 'This event has started.';
   else title = (code && BY_CODE[code]) ?? BY_STATUS[error.status] ?? 'Something went wrong.';
 
+  // For a validation error, the first field and its reason say more than
+  // "The request has invalid fields".
+  const firstField = error.problem?.errors?.[0];
   return {
     title,
-    detail: error.problem?.detail ?? null,
+    detail: firstField ? `${firstField.field}: ${firstField.message}` : (error.problem?.detail ?? null),
     answer: error.status === 0 ? 'no answer' : [error.status, code].filter(Boolean).join(' '),
   };
 }

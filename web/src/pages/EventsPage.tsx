@@ -1,13 +1,13 @@
 import { useEvents } from '../api/queries';
 import { EventCard } from '../components/EventCard';
 import { CardsSkeleton, EmptyState, LoadProblem, PageTitle } from '../components/States';
-import { proofOrganizer } from '../demo/people';
+import { proofOrganizerIds } from '../demo/people';
 
 export function EventsPage() {
   const events = useEvents();
 
   // Proof runs are demo machinery, not events to browse; their own page links to them.
-  const shown = events.data?.events.filter((event) => event.organizer.id !== proofOrganizer.id) ?? [];
+  const shown = events.data?.events.filter((event) => !proofOrganizerIds.has(event.organizer.id)) ?? [];
 
   return (
     <>

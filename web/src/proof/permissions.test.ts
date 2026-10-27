@@ -3,10 +3,10 @@ import { CHECKS, COLUMNS, judge } from './permissions';
 import { summarize } from './cancel';
 
 describe('who can do what', () => {
-  it('reads only 403 as denied', () => {
+  it('reads 2xx as allowed, 403 as denied, and anything else as neither', () => {
     expect(judge(403)).toBe('denied');
-    for (const status of [200, 201, 204, 409]) expect(judge(status)).toBe('allowed');
-    expect(judge(0)).toBe('no answer');
+    for (const status of [200, 201, 204]) expect(judge(status)).toBe('allowed');
+    for (const status of [0, 401, 404, 409, 500]) expect(judge(status)).toBe('unexpected');
   });
 
   it('writes an expected answer for every action and person', () => {

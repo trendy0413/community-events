@@ -37,12 +37,21 @@ export const personas: Persona[] = seed.people.map((person) => ({
 /** Owns the events that proof runs create. */
 export const proofOrganizer: DemoPerson = seed.proofOrganizer;
 
+/** "Another organizer" in the permission checks. */
+export const otherProofOrganizer: DemoPerson = seed.otherProofOrganizer;
+
+/** Proof-page machinery: their events are not shown in the browse list. */
+export const proofOrganizerIds = new Set([seed.proofOrganizer.id, seed.otherProofOrganizer.id]);
+
 /** The attendees a proof run sends at an event, all at once. */
 export const crowd: DemoPerson[] = seed.crowd;
 
 export function findPerson(id: string | null): DemoPerson | null {
   if (!id) return null;
-  return [...seed.people, seed.proofOrganizer, ...seed.crowd].find((person) => person.id === id) ?? null;
+  return (
+    [...seed.people, seed.proofOrganizer, seed.otherProofOrganizer, ...seed.crowd].find((person) => person.id === id) ??
+    null
+  );
 }
 
 export function initials(name: string): string {

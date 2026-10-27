@@ -1,6 +1,6 @@
 import { as } from '../api/client';
 import type { DemoPerson } from '../demo/people';
-import { createProofEvent, type RaceDeps } from './race';
+import { createProofEvent, PROOF_EVENT_START_DAYS, type RaceDeps } from './race';
 
 // Panel 3: five actions, tried live by four people. The expected answers are
 // written here from SPEC section 4, not read from the server, so the check
@@ -16,7 +16,7 @@ export const COLUMNS: { id: Column; label: string }[] = [
   { id: 'admin', label: 'Admin' },
 ];
 
-const MINUTE_MS = 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface Check {
   id: string;
@@ -41,13 +41,13 @@ export const CHECKS: Check[] = [
     label: 'Create an event',
     rule: 'R5',
     expected: { owner: 'allowed', otherOrganizer: 'allowed', attendee: 'denied', admin: 'denied' },
-    // Starts in a few minutes, so a created event soon leaves the upcoming lists.
+    // Made only by the proof organizers, whose events the browse list hides.
     run: (deps, _eventId, _capacity, person) =>
       statusOf(
         deps.api.POST('/v1/events', {
           body: {
             title: 'Permission check (proof page)',
-            startsAt: new Date(deps.today().getTime() + 5 * MINUTE_MS).toISOString(),
+            startsAt: new Date(deps.today().getTime() + PROOF_EVENT_START_DAYS * DAY_MS).toISOString(),
             timezone: 'UTC',
             capacity: 1,
           },
@@ -93,15 +93,18 @@ export const CHECKS: Check[] = [
   },
 ];
 
-/** 403 means denied. Any other answer from the server means the permission check passed. */
-export function judge(status: number): Expected | 'no answer' {
-  if (status === 0) return 'no answer';
-  return status === 403 ? 'denied' : 'allowed';
+/**
+ * 2xx means allowed and 403 means denied. Anything else (401, 404, 500, no
+ * answer) is neither, so it never counts as matching the SPEC.
+ */
+export function judge(status: number): Expected | 'unexpected' {
+  if (status >= 200 && status < 300) return 'allowed';
+  return status === 403 ? 'denied' : 'unexpected';
 }
 
 export interface Cell {
   status: number;
-  actual: Expected | 'no answer';
+  actual: Expected | 'unexpected';
   matches: boolean;
 }
 

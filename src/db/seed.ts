@@ -21,6 +21,8 @@ const SeedSchema = z
     people: z.array(Person),
     /** Owns the events that proof runs create, so they stay apart from the people's own. */
     proofOrganizer: Person,
+    /** "Another organizer" in the proof page's permission checks. */
+    otherProofOrganizer: Person,
     /** Attendees for proof runs and for the seats the demo reset takes. */
     crowd: z.array(Person),
     events: z.array(
@@ -59,7 +61,7 @@ export function loadSeedData(): SeedData {
 
 /** Every user in the seed file. */
 export function seedPeople(data: SeedData): SeedData['people'] {
-  return [...data.people, data.proofOrganizer, ...data.crowd];
+  return [...data.people, data.proofOrganizer, data.otherProofOrganizer, ...data.crowd];
 }
 
 /**

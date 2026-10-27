@@ -37,6 +37,12 @@
     "email": "proof@example.com",
     "roles": ["organizer"]
   },
+  "otherProofOrganizer": {
+    "id": "0d3c2f6e-1a1b-4c00-8a01-000000000007",
+    "name": "Proof organizer 2",
+    "email": "proof2@example.com",
+    "roles": ["organizer"]
+  },
   "crowd": [
     {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000001", "name": "Crowd 01", "email": "crowd01@example.com", "roles": ["attendee"]},
     {"id": "0d3c2f6e-1a1b-4c00-8a02-000000000002", "name": "Crowd 02", "email": "crowd02@example.com", "roles": ["attendee"]},

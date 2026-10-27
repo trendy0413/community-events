@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { ProblemNotice } from '../components/ProblemNotice';
-import { personas } from '../demo/people';
+import { crowd, otherProofOrganizer, personas } from '../demo/people';
 import { type CancelStep, cancelOnce, retryFull } from './cancel';
 import { deps } from './deps';
 import { type Cell, CHECKS, type Column, COLUMNS, runChecks } from './permissions';
@@ -84,6 +84,12 @@ export function CancelPanel({ race }: { race: Race | null }) {
   );
 }
 
+function lastOfCrowd() {
+  const person = crowd.at(-1);
+  if (!person) throw new Error('seed file has no crowd');
+  return person;
+}
+
 function personByEmail(email: string) {
   const person = personas.find((p) => p.email === email);
   if (!person) throw new Error(`seed file has no ${email}`);
@@ -102,8 +108,10 @@ export function PermissionsPanel() {
     try {
       const result = await runChecks(deps, {
         owner: deps.organizer,
-        otherOrganizer: personByEmail('omar@example.com'),
-        attendee: personByEmail('ana@example.com'),
+        otherOrganizer: otherProofOrganizer,
+        // The last of the crowd, so no real person's registrations fill up.
+        attendee: lastOfCrowd(),
+        // Admin calls here are reads or refusals, so acting as Ada changes nothing.
         admin: personByEmail('ada@example.com'),
       });
       setCells(result.cells);
@@ -190,7 +198,8 @@ function CellView({ expected, cell }: { expected: string; cell: Cell | undefined
         className={cn('size-3.5', cell.actual === 'allowed' ? 'text-success' : 'text-muted-foreground')}
         aria-hidden="true"
       />
-      {cell.actual === 'allowed' ? 'Allowed' : cell.actual === 'denied' ? 'Denied' : 'No answer'} · {cell.status || '—'}
+      {cell.actual === 'allowed' ? 'Allowed' : cell.actual === 'denied' ? 'Denied' : 'Unexpected'} ·{' '}
+      {cell.status || '—'}
       {!cell.matches && ` (expected ${expected})`}
     </span>
   );

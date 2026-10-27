@@ -49,10 +49,16 @@ export interface RaceDeps {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+/**
+ * Proof events start late in the allowed year: upcoming lists are soonest
+ * first and capped, so these sort after every real event instead of pushing
+ * real ones off the end.
+ */
+export const PROOF_EVENT_START_DAYS = 330;
 
 /** W3: every run gets its own event, so runs by different visitors never mix. */
 export async function createProofEvent(deps: RaceDeps, capacity: number, title: string) {
-  const start = new Date(deps.today().getTime() + 30 * DAY_MS);
+  const start = new Date(deps.today().getTime() + PROOF_EVENT_START_DAYS * DAY_MS);
   return unwrap(
     deps.api.POST('/v1/events', {
       body: {

@@ -27,10 +27,11 @@ describe('seed data', () => {
     for (const event of data.events) expect(organizers.has(event.organizerId)).toBe(true);
   });
 
-  it('gives proof runs an organizer and a crowd of 50 who can only attend', () => {
-    const { proofOrganizer, crowd } = loadSeedData();
+  it('gives proof runs two organizers and a crowd of 50 who can only attend', () => {
+    const { proofOrganizer, otherProofOrganizer, crowd } = loadSeedData();
 
     expect(proofOrganizer.roles).toEqual(['organizer']);
+    expect(otherProofOrganizer.roles).toEqual(['organizer']);
     expect(crowd).toHaveLength(50);
     for (const person of crowd) expect(person.roles).toEqual(['attendee']);
   });
