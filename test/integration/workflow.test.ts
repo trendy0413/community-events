@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { type App, buildApp } from '../../src/app.js';
+import { type App, buildApp } from '../../src/http/app.js';
 import type { Problem } from '../../src/http/errors.js';
 import type { AttendeeList, EventView } from '../../src/modules/events/schemas.js';
 import { createUser, createUsers, seatCounts, testDb } from './helpers.js';

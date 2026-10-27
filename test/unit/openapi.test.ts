@@ -1,6 +1,6 @@
 import { Validator } from '@seriousme/openapi-schema-validator';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { type App, buildApp } from '../../src/app.js';
+import { type App, buildApp } from '../../src/http/app.js';
 import { LOCAL_DATABASE_URL } from '../../src/config.js';
 import { createDb } from '../../src/db/client.js';
 import { finishContract } from '../../src/http/openapi.js';
@@ -34,7 +34,7 @@ describe('OpenAPI contract', () => {
 
   it('names each shared schema once and keeps only the ones routes use', async () => {
     const { paths, components } = await contract();
-    expect(Object.keys(components.schemas).sort()).toEqual([
+    expect(Object.keys(components.schemas)).toEqual([
       'AttendeeList',
       'ChangeCapacityInput',
       'CreateEventInput',
@@ -89,7 +89,7 @@ describe('finishContract', () => {
   });
   type Finished = { components: { schemas: Record<string, unknown> } };
 
-  it('keeps schemas reached only through other schemas, and drops the rest', () => {
+  it('keeps schemas reached only through other schemas, drops the rest, and sorts them by name', () => {
     const finished = finishContract(
       document(
         {
@@ -100,7 +100,7 @@ describe('finishContract', () => {
         { $ref: '#/components/schemas/List' },
       ),
     ) as Finished;
-    expect(Object.keys(finished.components.schemas)).toEqual(['List', 'Item']);
+    expect(Object.keys(finished.components.schemas)).toEqual(['Item', 'List']);
     // Opened through the response, including the schema it points at.
     expect(JSON.stringify(finished.components.schemas)).not.toContain('additionalProperties');
   });

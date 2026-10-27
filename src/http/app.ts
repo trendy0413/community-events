@@ -8,12 +8,12 @@ import {
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
-import type { AuthMode, Config } from './config.js';
-import type { Db } from './db/client.js';
-import { frameworkErrors, registerErrorHandling } from './http/errors.js';
-import { transformObject } from './http/openapi.js';
-import { v1Routes } from './http/v1.js';
-import { healthRoutes } from './modules/health/routes.js';
+import type { AuthMode, Config } from '../config.js';
+import type { Db } from '../db/client.js';
+import { healthRoutes } from '../modules/health/routes.js';
+import { frameworkErrors, registerErrorHandling } from './errors.js';
+import { transformObject } from './openapi.js';
+import { v1Routes } from './v1.js';
 
 export interface AppOptions {
   db: Db;

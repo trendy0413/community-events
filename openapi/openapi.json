@@ -15,6 +15,68 @@
       }
     },
     "schemas": {
+      "AttendeeList": {
+        "type": "object",
+        "properties": {
+          "registrations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "attendee": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ]
+                },
+                "registeredAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "attendee",
+                "registeredAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "registrations"
+        ]
+      },
+      "ChangeCapacityInput": {
+        "type": "object",
+        "properties": {
+          "capacity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          }
+        },
+        "required": [
+          "capacity"
+        ],
+        "additionalProperties": false
+      },
       "CreateEventInput": {
         "type": "object",
         "properties": {
@@ -55,79 +117,6 @@
           "capacity"
         ],
         "additionalProperties": false
-      },
-      "ChangeCapacityInput": {
-        "type": "object",
-        "properties": {
-          "capacity": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 500
-          }
-        },
-        "required": [
-          "capacity"
-        ],
-        "additionalProperties": false
-      },
-      "Problem": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "about:blank"
-          },
-          "title": {
-            "type": "string"
-          },
-          "status": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "code": {
-            "type": "string",
-            "enum": [
-              "VALIDATION_FAILED",
-              "UNAUTHENTICATED",
-              "FORBIDDEN",
-              "NOT_FOUND",
-              "EVENT_FULL",
-              "EVENT_STARTED",
-              "CAPACITY_BELOW_REGISTERED",
-              "INTERNAL_ERROR"
-            ]
-          },
-          "detail": {
-            "type": "string"
-          },
-          "errors": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "field": {
-                  "type": "string"
-                },
-                "message": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "field",
-                "message"
-              ]
-            }
-          }
-        },
-        "required": [
-          "type",
-          "title",
-          "status",
-          "code",
-          "detail"
-        ],
-        "description": "Error in the problem+json shape (SPEC section 7)"
       },
       "Event": {
         "type": "object",
@@ -239,52 +228,32 @@
           "events"
         ]
       },
-      "AttendeeList": {
+      "Health": {
         "type": "object",
         "properties": {
-          "registrations": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "attendee": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid",
-                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                    },
-                    "name": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "name"
-                  ]
-                },
-                "registeredAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                }
-              },
-              "required": [
-                "id",
-                "attendee",
-                "registeredAt"
-              ]
-            }
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "unavailable"
+            ]
+          },
+          "db": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "down"
+            ]
+          },
+          "identity": {
+            "type": "string",
+            "const": "dev-stub"
           }
         },
         "required": [
-          "registrations"
+          "status",
+          "db",
+          "identity"
         ]
       },
       "MyRegistrations": {
@@ -365,6 +334,65 @@
         "required": [
           "registrations"
         ]
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "about:blank"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "VALIDATION_FAILED",
+              "UNAUTHENTICATED",
+              "FORBIDDEN",
+              "NOT_FOUND",
+              "EVENT_FULL",
+              "EVENT_STARTED",
+              "CAPACITY_BELOW_REGISTERED",
+              "INTERNAL_ERROR"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field",
+                "message"
+              ]
+            }
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "detail"
+        ],
+        "description": "Error in the problem+json shape (SPEC section 7)"
       },
       "Registration": {
         "type": "object",
@@ -449,34 +477,6 @@
           "name",
           "email",
           "roles"
-        ]
-      },
-      "Health": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "ok",
-              "unavailable"
-            ]
-          },
-          "db": {
-            "type": "string",
-            "enum": [
-              "ok",
-              "down"
-            ]
-          },
-          "identity": {
-            "type": "string",
-            "const": "dev-stub"
-          }
-        },
-        "required": [
-          "status",
-          "db",
-          "identity"
         ]
       }
     }

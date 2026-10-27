@@ -27,9 +27,9 @@ const RESPONSE_HEADERS: Record<string, Json> = {
 export const transformObject: SwaggerTransformObject = (document) => finishContract(jsonSchemaTransformObject(document));
 
 /**
- * Three fixes on top of the Zod provider's output:
- * - Only components some route uses are kept. The provider emits an input
- *   and an output variant of every named schema.
+ * Fixes on top of the Zod provider's output:
+ * - Only components some route uses are kept, sorted by name. The provider
+ *   emits an input and an output variant of every named schema.
  * - Response schemas allow fields they do not list. Zod's output form
  *   forbids them, and some generated clients (Swift) then fail to decode
  *   every response once the API adds a field. The server still sends only
@@ -95,7 +95,11 @@ export function finishContract(document: Document): Document {
   }
 
   if (contract.components) {
-    contract.components.schemas = Object.fromEntries(Object.entries(schemas).filter(([name]) => used.has(name)));
+    // Sorted by name: the provider adds schemas in import order, and the
+    // committed file should not change when imports are reordered.
+    const kept = Object.entries(schemas).filter(([name]) => used.has(name));
+    kept.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    contract.components.schemas = Object.fromEntries(kept);
   }
   return contract as Document;
 }

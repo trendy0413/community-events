@@ -30,7 +30,7 @@ npm --prefix web run build # production web build
 ## Code map
 
 ```text
-src/app.ts               buildApp(): plugins, routes, error handler (used by tests and the server)
+src/http/app.ts          buildApp(): plugins, routes, error handler (used by tests and the server)
 src/server.ts            starts the server; also the entry file Vercel detects
 src/config.ts            reads and checks environment variables
 src/db/                  pg pool and Kysely instance, table types, migration runner, seed
@@ -43,6 +43,7 @@ src/http/openapi.ts      OpenAPI components: schemas named with .meta({ id }), u
 src/http/v1.ts           the /v1 scope: identity check, then the module routes
 src/modules/<feature>/   routes.ts, service.ts, repository.ts, schemas.ts
 migrations/*.sql         schema changes, add-only
+vercel.json              demo hosting on Vercel; its build runs scripts/vercel-build.ts (migrations)
 scripts/                 repo tooling, for example the rule-to-test check
 test/unit/               no database
 test/integration/        real PostgreSQL

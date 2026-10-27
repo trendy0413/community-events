@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadServerConfig } from '../../src/config.js';
@@ -31,5 +32,14 @@ describe('server startup', () => {
 
   it('accepts AUTH_MODE=dev-stub', () => {
     expect(loadServerConfig({ AUTH_MODE: 'dev-stub' }).authMode).toBe('dev-stub');
+  });
+
+  it('keeps src/server.ts as the entry file the demo host picks', () => {
+    // Vercel runs the first of these that exists (see src/server.ts).
+    const candidates = ['src/app', 'src/index', 'src/server', 'app', 'index', 'server'].flatMap((name) =>
+      ['js', 'mjs', 'cjs', 'ts', 'cts', 'mts'].map((extension) => `${name}.${extension}`),
+    );
+
+    expect(candidates.find((file) => existsSync(path.join(repoRoot, file)))).toBe('src/server.ts');
   });
 });

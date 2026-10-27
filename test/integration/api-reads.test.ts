@@ -1,6 +1,6 @@
 import { createServer, type AddressInfo, type Socket } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { type App, buildApp } from '../../src/app.js';
+import { type App, buildApp } from '../../src/http/app.js';
 import { createDb } from '../../src/db/client.js';
 import type { Problem } from '../../src/http/errors.js';
 import type { EventView } from '../../src/modules/events/schemas.js';

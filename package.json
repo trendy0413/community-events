@@ -20,7 +20,8 @@
     "check:rules": "tsx scripts/check-rule-tests.ts",
     "openapi": "tsx scripts/export-openapi.ts",
     "check:openapi": "tsx scripts/export-openapi.ts --check",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "vercel-build": "node --import tsx scripts/vercel-build.ts"
   },
   "dependencies": {
     "@fastify/swagger": "^9.9.2",
@@ -43,5 +44,8 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.0.5"
+  },
+  "overrides": {
+    "content-disposition": "2.0.1"
   }
 }

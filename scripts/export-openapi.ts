@@ -5,7 +5,7 @@
 // OpenAPI with every $ref resolved: client generators reject anything else.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { Validator } from '@seriousme/openapi-schema-validator';
-import { buildApp } from '../src/app.js';
+import { buildApp } from '../src/http/app.js';
 import { createDb } from '../src/db/client.js';
 
 const OUT = new URL('../openapi/openapi.json', import.meta.url);

@@ -1,6 +1,6 @@
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { type App, buildApp } from '../../src/app.js';
+import { type App, buildApp } from '../../src/http/app.js';
 import { LOCAL_DATABASE_URL } from '../../src/config.js';
 import { createDb } from '../../src/db/client.js';
 import { DomainError, type Problem } from '../../src/http/errors.js';
@@ -127,5 +127,17 @@ describe('HTTP contract', () => {
       detail: 'Something went wrong on our side. Please try again.',
     });
     expect(res.body).not.toContain('secret internal detail');
+  });
+});
+
+describe('docs', () => {
+  it('serves Swagger UI at /docs and the contract at /openapi.json', async () => {
+    const server = await appWithTestRoutes();
+
+    const docs = await server.inject({ method: 'GET', url: '/docs' });
+    expect(docs.statusCode).toBe(200);
+    expect(docs.headers['content-type']).toMatch(/^text\/html/);
+    const contract = await server.inject({ method: 'GET', url: '/openapi.json' });
+    expect(contract.json()).toMatchObject({ openapi: '3.1.0' });
   });
 });

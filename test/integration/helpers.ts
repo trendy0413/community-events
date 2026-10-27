@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { inject } from 'vitest';
-import type { App } from '../../src/app.js';
+import type { App } from '../../src/http/app.js';
 import { createDb, type Db } from '../../src/db/client.js';
 import type { Role } from '../../src/db/schema.js';
 
