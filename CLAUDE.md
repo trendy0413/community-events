@@ -20,7 +20,7 @@ npm run check:rules        # SPEC rule IDs vs test names; `npm run check:rules -
 npm run typecheck
 npm run openapi            # export openapi/openapi.json from the route schemas, then regenerate web/src/api/schema.d.ts
 npm run check:openapi      # fail if openapi/openapi.json is not valid OpenAPI or is out of date (CI runs this)
-npm run mutants            # only if mutants/ exists: each mutant must be caught by a test
+npm run mutants            # breaks each rule in mutants/mutants.json on purpose; a test must catch every one
 npm --prefix web run dev   # web client on http://localhost:5173 (proxies /v1 to the API)
 npm --prefix web run lint  # web lint, including the W1 rule (no imports from src/)
 npm --prefix web test      # web logic tests

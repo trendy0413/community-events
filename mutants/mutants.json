@@ -1,0 +1,72 @@
+[
+  {
+    "id": "M1",
+    "rule": "R1",
+    "breaks": "takeSeat no longer checks for a free seat",
+    "file": "src/modules/registrations/repository.ts",
+    "find": "    .whereRef('registered_count', '<', 'capacity')\n    .where('starts_at', '>', sql<Date>`now()`)\n",
+    "replace": "    .where('starts_at', '>', sql<Date>`now()`)\n",
+    "tests": ["test/integration/registrations.test.ts"],
+    "pattern": "R1 "
+  },
+  {
+    "id": "M2",
+    "rule": "R2",
+    "breaks": "register no longer returns the existing registration on a retry",
+    "file": "src/modules/registrations/repository.ts",
+    "find": "    .onConflict((oc) => oc.columns(['event_id', 'attendee_id']).where('status', '=', sql.lit('active')).doNothing())\n",
+    "replace": "",
+    "tests": ["test/integration/registrations.test.ts"],
+    "pattern": "R2 "
+  },
+  {
+    "id": "M3",
+    "rule": "R3",
+    "breaks": "cancel frees a seat even when nothing was cancelled",
+    "file": "src/modules/registrations/service.ts",
+    "find": "    if (!cancelled) {\n      if (!(await findEventSeatState(trx, eventId))) throw notFound();\n      return { cancelled: false };\n    }\n",
+    "replace": "    if (!cancelled && !(await findEventSeatState(trx, eventId))) throw notFound();\n",
+    "tests": ["test/integration/registrations.test.ts"],
+    "pattern": "R3 "
+  },
+  {
+    "id": "M4",
+    "rule": "R4",
+    "breaks": "takeSeat no longer checks that the event has not started",
+    "file": "src/modules/registrations/repository.ts",
+    "find": "    .whereRef('registered_count', '<', 'capacity')\n    .where('starts_at', '>', sql<Date>`now()`)\n",
+    "replace": "    .whereRef('registered_count', '<', 'capacity')\n",
+    "tests": ["test/integration/registrations.test.ts"],
+    "pattern": "R4 "
+  },
+  {
+    "id": "M5",
+    "rule": "R5",
+    "breaks": "anyone may create an event",
+    "file": "src/auth/policy.ts",
+    "find": "    case 'event:create':\n      return has('organizer');\n",
+    "replace": "    case 'event:create':\n      return true;\n",
+    "tests": ["test/integration/api.test.ts"],
+    "pattern": "R5 "
+  },
+  {
+    "id": "M6",
+    "rule": "R6",
+    "breaks": "any organizer may see any event's attendee list",
+    "file": "src/auth/policy.ts",
+    "find": "      return has('admin') || (has('organizer') && owns);\n",
+    "replace": "      return has('admin') || has('organizer');\n",
+    "tests": ["test/unit/policy.test.ts"],
+    "pattern": ""
+  },
+  {
+    "id": "M7",
+    "rule": "R7",
+    "breaks": "the capacity change no longer checks the seats already taken",
+    "file": "src/modules/events/repository.ts",
+    "find": "    .where('registered_count', '<=', capacity)\n",
+    "replace": "",
+    "tests": ["test/integration/api-reads.test.ts"],
+    "pattern": "R7 "
+  }
+]
