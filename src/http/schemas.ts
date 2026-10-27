@@ -44,3 +44,6 @@ export function problems<S extends ErrorStatus>(...statuses: S[]): Record<S | 50
 }
 
 export const EventIdParams = z.object({ id: z.uuid() });
+
+// Lists have no pages beyond this (SPEC section 12), so every list is capped.
+export const LimitQuery = z.coerce.number().int().min(1).max(50).default(20);

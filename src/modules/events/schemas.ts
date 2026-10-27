@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LimitQuery } from '../../http/schemas.js';
 
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -45,6 +46,16 @@ export const CreateEventBody = z.strictObject({
 
 export type CreateEventInput = z.infer<typeof CreateEventBody>;
 
+export const ChangeCapacityBody = z.strictObject({
+  capacity: z.number().int().min(1).max(500),
+});
+
+export const ListEventsQuery = z.strictObject({
+  organizer: z.literal('me').optional(),
+  scope: z.literal('past').optional(),
+  limit: LimitQuery,
+});
+
 export const EventResponse = z.object({
   id: z.uuid(),
   title: z.string(),
@@ -59,6 +70,8 @@ export const EventResponse = z.object({
 });
 
 export type EventView = z.infer<typeof EventResponse>;
+
+export const EventListResponse = z.object({ events: z.array(EventResponse) });
 
 // Names and times only: attendee emails stay private (R6).
 export const AttendeeListResponse = z.object({

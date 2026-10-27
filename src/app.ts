@@ -12,6 +12,7 @@ import type { AuthMode, Config } from './config.js';
 import type { Db } from './db/client.js';
 import { frameworkErrors, registerErrorHandling } from './http/errors.js';
 import { v1Routes } from './http/v1.js';
+import { healthRoutes } from './modules/health/routes.js';
 
 export interface AppOptions {
   db: Db;
@@ -76,6 +77,7 @@ export async function buildApp(options: AppOptions) {
   // The contract at a stable path, for client generators (SPEC section 6).
   app.get('/openapi.json', { schema: { hide: true } }, () => app.swagger());
 
+  await app.register(healthRoutes, { prefix: '/v1', db: options.db, authMode: options.authMode });
   await app.register(v1Routes, { prefix: '/v1', db: options.db });
 
   return app;

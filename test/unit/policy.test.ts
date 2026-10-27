@@ -16,8 +16,9 @@ const event = { organizerId: people.owner.id };
 
 // SPEC section 4, one row per action. Each column is one role alone.
 const TABLE: [Action, Record<Who, boolean>][] = [
+  ['me:read', { attendee: true, owner: true, otherOrganizer: true, admin: true }],
   ['event:read', { attendee: true, owner: true, otherOrganizer: true, admin: true }],
-  ['event:list-all', { attendee: false, owner: false, otherOrganizer: false, admin: true }],
+  ['event:list-past', { attendee: false, owner: false, otherOrganizer: false, admin: true }],
   ['event:create', { attendee: false, owner: true, otherOrganizer: true, admin: false }],
   ['event:update', { attendee: false, owner: true, otherOrganizer: false, admin: false }],
   ['event:list-registrations', { attendee: false, owner: true, otherOrganizer: false, admin: true }],

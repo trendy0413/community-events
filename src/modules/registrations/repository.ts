@@ -103,6 +103,34 @@ export async function freeSeat(trx: Trx, eventId: string): Promise<boolean> {
   return row !== undefined;
 }
 
+export interface MyRegistration {
+  id: string;
+  status: 'active' | 'cancelled';
+  createdAt: Date;
+  cancelledAt: Date | null;
+  event: { id: string; title: string; startsAt: Date; timezone: string };
+}
+
+/** The attendee's own registrations, active and cancelled, newest first. Read-only. */
+export async function listMyRegistrations(db: Kysely<Database>, attendeeId: string, limit: number): Promise<MyRegistration[]> {
+  const rows = await db
+    .selectFrom('registrations as r')
+    .innerJoin('events as e', 'e.id', 'r.event_id')
+    .select(['r.id', 'r.status', 'r.created_at', 'r.cancelled_at', 'e.id as event_id', 'e.title', 'e.starts_at', 'e.timezone'])
+    .where('r.attendee_id', '=', attendeeId)
+    .orderBy('r.created_at', 'desc')
+    .orderBy('r.id')
+    .limit(limit)
+    .execute();
+  return rows.map((row) => ({
+    id: row.id,
+    status: row.status,
+    createdAt: row.created_at,
+    cancelledAt: row.cancelled_at,
+    event: { id: row.event_id, title: row.title, startsAt: row.starts_at, timezone: row.timezone },
+  }));
+}
+
 export interface EventSeatState {
   started: boolean;
   capacity: number;

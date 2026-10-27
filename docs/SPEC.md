@@ -33,12 +33,12 @@ One person can hold more than one role, for example organizer and attendee. The 
 | R2 | One active registration per attendee per event. Registering again returns the existing registration. | brief (implied) | One person takes two seats. A retry on a weak network books twice. | `R2 registering twice returns the same registration`, `R2 10 parallel requests by one person give one registration`, `R2 parallel register and cancel by one person never return 500`, `R2 register retries when the same person's cancel commits in between`, `R2 register is retried once when the database connection drops` |
 | R3 | Cancelling frees the seat right away. Cancelling again changes nothing. | brief | A freed seat stays blocked. A repeated cancel frees two seats. | `R3 cancel frees the seat`, `R3 double cancel frees the seat only once`, `R3 can register again after cancelling`, `R3 cancel is retried once when the database connection drops` |
 | R4 | After an event starts, new registrations and cancellations are rejected. | assumption | People join or leave an event that is already running. | `R4 rejects registration after the event starts`, `R4 rejects cancellation after the event starts` |
-| R5 | Only organizers create events. An organizer changes only their own events. | brief | One organizer edits another organizer's event. | `R5 attendee cannot create an event`, `R5 organizer cannot change another organizer's event` |
-| R6 | Only the event's organizer and admins see who registered. Only admins see other people's emails. | assumption (privacy) | Personal data leaks to other users. | `R6 attendee cannot see the attendee list`, `R6 no endpoint shows another user's email to an attendee` |
-| R7 | Capacity can't be set below the number of people already registered, and can't be changed after the event starts. | assumption | Registered people lose their seat without notice. | `R7 rejects capacity below registered count`, `R7 rejects capacity change after the event starts` |
-| R8 | Every `/v1` route except `/v1/health` needs an identity. A missing, malformed or unknown user id gets 401. | added | Anyone could change data without an identity. | `R8 request without identity gets 401`, `R8 unknown user gets 401` |
+| R5 | Only organizers create events. An organizer changes only their own events. | brief | One organizer edits another organizer's event. | `R5 attendee cannot create an event`, `R5 organizer cannot change another organizer's event`, `R5 capacity change checks the owner again in SQL` |
+| R6 | Only the event's organizer and admins see who registered. Only admins see other people's emails. | assumption (privacy) | Personal data leaks to other users. | `R6 attendee cannot see the attendee list`, `R6 no endpoint shows another user's email to an attendee`, `R6 no endpoint shows another user's email to an organizer` |
+| R7 | Capacity can't be set below the number of people already registered, and can't be changed after the event starts. | assumption | Registered people lose their seat without notice. | `R7 rejects capacity below registered count`, `R7 rejects capacity change after the event starts`, `R7 capacity decrease racing registrations never overbooks`, `R7 capacity change retries when a cancel commits in between` |
+| R8 | Every `/v1` route except `/v1/health` needs an identity. A missing, malformed or unknown user id gets 401. | added | Anyone could change data without an identity. | `R8 request without identity gets 401`, `R8 unknown user gets 401`, `R8 health answers without an identity` |
 | R9 | The dev identity stub (section 9) runs only when `AUTH_MODE=dev-stub`. If `AUTH_MODE` is missing or has another value, the server refuses to start. | added | On a real deployment, anyone can act as any user. | `R9 server refuses to start without AUTH_MODE` |
-| R10 | Input limits: title 3-80 characters, description up to 500, capacity 1-500, start time in the future and less than 1 year away, a valid IANA time zone. Unknown fields are rejected. | brief (exact limits added) | Bad or huge input breaks pages or fills the database. | `R10 rejects invalid event input` |
+| R10 | Input limits: title 3-80 characters, description up to 500, capacity 1-500, start time in the future and less than 1 year away, a valid IANA time zone. Unknown fields are rejected. | brief (exact limits added) | Bad or huge input breaks pages or fills the database. | `R10 rejects invalid event input`, `R10 rejects invalid capacity change input` |
 
 Source: `brief` = stated in the brief. `brief (implied)` = follows from the brief. `assumption` = a product choice (see also section 11). `added` = a safety rule the brief does not ask for.
 
@@ -54,7 +54,8 @@ Each column shows one role alone. A person with two roles gets the rights of bot
 |---|---|---|---|---|
 | List and view upcoming events | yes | yes | yes | yes |
 | View one event by its id, also a past one | yes | yes | yes | yes |
-| List past events (`scope=all`) | no | no | no | yes |
+| See their own profile (`/v1/me`) | yes | yes | yes | yes |
+| List past events (`scope=past`) | no | no | no | yes |
 | Create an event | no | yes | yes | no |
 | Change an event's capacity | no | yes | no | no |
 | See who registered for an event | no | yes | no | yes |
@@ -97,19 +98,19 @@ Data-model constraints have no rule ID of their own: they back up the rules in t
 | GET | `/v1/health` | anyone | 200 `{status, db, identity}`. 503 with the same body if the database is down (not problem+json). |
 | GET | `/v1/me` | any user | 200 the current user |
 | GET | `/v1/users` | admin | 200 all users |
-| GET | `/v1/events` | any user | 200 upcoming events, soonest first. Query: `organizer=me`, `scope=all` (admin only, includes past events), `limit` 1-50 (default 20) |
+| GET | `/v1/events` | any user | 200 upcoming events, soonest first. Query: `organizer=me`, `scope=past` (admin only: started events, newest first), `limit` 1-50 (default 20) |
 | POST | `/v1/events` | organizer | 201 the event, with a `Location` header |
 | GET | `/v1/events/{id}` | any user | 200 the event |
 | PATCH | `/v1/events/{id}` | the event's organizer | 200 the event. Body: `{capacity}` |
 | GET | `/v1/events/{id}/registrations` | the event's organizer, admin | 200 active registrations: attendee name and time, no emails |
 | PUT | `/v1/events/{id}/registrations/me` | attendee | 201 a new registration, or 200 if already registered. Safe to retry. |
 | DELETE | `/v1/events/{id}/registrations/me` | attendee | 204, also when already cancelled or never registered. 404 if the event does not exist. Safe to retry. |
-| GET | `/v1/me/registrations` | attendee | 200 my registrations (active and cancelled), newest first |
+| GET | `/v1/me/registrations` | attendee | 200 my registrations (active and cancelled), newest first. Query: `limit` 1-50 (default 20) |
 | GET | `/docs`, `/openapi.json` | anyone | Swagger UI and the OpenAPI contract |
 
 `anyone` = no identity needed. `any user` = any known user (R8).
 
-**Response schemas:** every `/v1` route declares a response schema. The server sends only the fields listed in it (an allow-list), so a new database column can never leak to clients. The R6 leak test calls every endpoint.
+**Response schemas:** every `/v1` route declares a response schema. The server sends only the fields listed in it (an allow-list), so a new database column can never leak to clients. The R6 leak tests call every endpoint, as an attendee and as an organizer, and fail if a route the server answers is missing from their list.
 
 Every `/v1` response sends `Cache-Control: no-store`, so seat counts are never cached by a browser or a proxy.
 
@@ -160,6 +161,35 @@ Every `/v1` response sends `Cache-Control: no-store`, so seat counts are never c
 }
 ```
 
+**Event list** (`GET /v1/events`): `{"events": [Event, …]}`.
+- By default: events that have not started, soonest first.
+- `organizer=me`: only the caller's own events.
+- `scope=past` (admins only): only events that have started, newest first. Upcoming and past events are separate lists, because in one list either kind could fill every row up to `limit` and hide the other.
+- `limit`: 1-50, default 20. There are no pages beyond it (section 12).
+- Unknown query parameters are rejected.
+
+**Change capacity** (`PATCH /v1/events/{id}`): body `{"capacity": 1-500}`, nothing else. Answers the Event.
+
+**My registrations** (`GET /v1/me/registrations`), active and cancelled, newest first, at most `limit` (1-50, default 20):
+
+```json
+{
+  "registrations": [
+    {
+      "id": "…",
+      "status": "cancelled",
+      "createdAt": "2026-10-26T15:04:05.000Z",
+      "cancelledAt": "2026-10-26T16:00:00.000Z",
+      "event": { "id": "…", "title": "Board game night", "startsAt": "2026-11-05T23:00:00.000Z", "timezone": "America/New_York" }
+    }
+  ]
+}
+```
+
+**Me** (`GET /v1/me`): `{"id", "name", "email", "roles"}`. **Users** (`GET /v1/users`, admins only): `{"users": [Me, …]}`.
+
+**Health** (`GET /v1/health`): `{"status": "ok", "db": "ok", "identity": "dev-stub"}`. If the database does not answer: 503 with `"status": "unavailable", "db": "down"`.
+
 ## 7. Errors
 
 Every error uses one shape, `application/problem+json`. A conflict:
@@ -193,7 +223,7 @@ A validation error adds `errors`:
 |---|---|---|
 | `VALIDATION_FAILED` | 400 | Bad body, query or path value (for example a malformed UUID) |
 | `UNAUTHENTICATED` | 401 | Missing, malformed or unknown identity (R8) |
-| `FORBIDDEN` | 403 | The identity is known but not allowed (R5, R6, `scope=all` without the admin role) |
+| `FORBIDDEN` | 403 | The identity is known but not allowed (R5, R6, `scope=past` without the admin role) |
 | `NOT_FOUND` | 404 | The event or the route does not exist |
 | `EVENT_FULL` | 409 | No seats left (R1) |
 | `EVENT_STARTED` | 409 | The event has started (R4, R7) |
@@ -218,7 +248,7 @@ The seat count is kept in `events.registered_count`. It changes only inside thes
 2. Only when a row changed: `UPDATE events SET registered_count = registered_count - 1 WHERE id = $1 AND starts_at > now() RETURNING id`.
    - If no row comes back, the event has started: roll back and return `EVENT_STARTED`.
 
-**Capacity change:** `can()` first checks that the caller owns the event (`FORBIDDEN` if not). Then one `UPDATE events SET capacity = $2, updated_at = now() WHERE id = $1 AND organizer_id = $3 AND registered_count <= $2 AND starts_at > now() RETURNING *`. The `organizer_id` condition is a second guard. If no row comes back, read the event again and return `NOT_FOUND`, `EVENT_STARTED` or `CAPACITY_BELOW_REGISTERED`.
+**Capacity change:** `can()` first checks that the caller owns the event (`FORBIDDEN` if not). Then one `UPDATE events SET capacity = $2, updated_at = now() WHERE id = $1 AND organizer_id = $3 AND registered_count <= $2 AND starts_at > now() RETURNING *`. The `organizer_id` condition is a second guard. If no row comes back, read the event again and return the first reason that still holds: `NOT_FOUND`, `FORBIDDEN` (another owner), `EVENT_STARTED`, or `CAPACITY_BELOW_REGISTERED` (more people registered than the new capacity). If none holds, a cancel committed in between: run the `UPDATE` again, up to 3 attempts in total (then `INTERNAL_ERROR`, as for register).
 
 Why this is safe:
 - Under READ COMMITTED, a second `UPDATE` on the same event row waits for the first transaction to finish. Then it checks its `WHERE` again on the newest row. So the last seat goes to exactly one transaction.
@@ -229,7 +259,7 @@ Why this is safe:
 - "Check, then insert" (count the rows, then insert) is not used. Two requests can both see one free seat.
 - If the database connection drops during a register or a cancel, the service runs it once more. Both are idempotent, so this is safe. If the first try never committed, the retry does the work. If it did commit, the retry gets the same answer a client retry would: the existing registration (200), or nothing to cancel (204). A retry can never take a second seat or free one twice.
 
-The rule tests R1-R4 cover these steps. The `NOT_FOUND` paths have no rule ID; `test/integration/registrations.test.ts` covers them too. The same-person race between register's insert and select needs exact timing, so `test/integration/registrations-retry.test.ts` forces it with a real cancel at that moment.
+The rule tests R1-R4 cover these steps. The `NOT_FOUND` paths have no rule ID; `test/integration/registrations.test.ts` covers them too. The same-person race between register's insert and select needs exact timing, so `test/integration/registrations-retry.test.ts` forces it with a real cancel at that moment. `test/integration/events-retry.test.ts` does the same for a cancel between a failed capacity change and its read.
 
 Other option: lock the event row with `SELECT … FOR UPDATE`, then count the active rows with `COUNT(*)`. This is also correct, but slower, because every request runs a count. It becomes the better choice if seat holds with an expiry time are added (section 12). An expired hold then stops counting by itself, with no cleanup job.
 

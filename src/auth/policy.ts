@@ -14,8 +14,9 @@ export interface Actor {
 }
 
 export type Action =
+  | 'me:read'
   | 'event:read'
-  | 'event:list-all'
+  | 'event:list-past'
   | 'event:create'
   | 'event:update'
   | 'event:list-registrations'
@@ -33,9 +34,10 @@ export function can(actor: Actor, action: Action, resource?: OwnedResource): boo
   const owns = resource !== undefined && resource.organizerId === actor.id;
 
   switch (action) {
+    case 'me:read':
     case 'event:read':
       return true;
-    case 'event:list-all':
+    case 'event:list-past':
       return has('admin');
     case 'event:create':
       return has('organizer');
@@ -48,10 +50,12 @@ export function can(actor: Actor, action: Action, resource?: OwnedResource): boo
       return has('attendee');
     case 'user:list':
       return has('admin');
-    default:
+    default: {
       // An action added to the type but not to this switch is a compile
       // error here; at runtime it fails the request instead of allowing it.
-      throw new Error(`can(): no rule for action ${String(action)}`);
+      const unhandled: never = action;
+      throw new Error(`can(): no rule for action ${String(unhandled)}`);
+    }
   }
 }
 

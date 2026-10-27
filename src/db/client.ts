@@ -47,6 +47,11 @@ export function createDb(databaseUrl: string, options: DbOptions = {}): Db {
     // Short idle time: serverless hosts suspend idle instances, and a pooled
     // connection left open there is never closed cleanly.
     idleTimeoutMillis: 5000,
+    // No connectionTimeoutMillis: pg-pool also applies it to requests queued
+    // for a busy pool, and that timeout is not a lost connection, so a burst
+    // (the 50-for-10 race) would answer 500 instead of waiting its turn. A
+    // database that hangs is bounded by the host's request time limit, and
+    // /v1/health has a limit of its own.
   });
   // Without a listener, a server closing an idle connection (a database that
   // scales to zero does this) crashes the process. The pool drops the broken

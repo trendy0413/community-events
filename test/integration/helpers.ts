@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { inject } from 'vitest';
+import type { App } from '../../src/app.js';
 import { createDb, type Db } from '../../src/db/client.js';
 import type { Role } from '../../src/db/schema.js';
 
@@ -67,4 +68,34 @@ export async function createEvent(
     .returning('id')
     .executeTakeFirstOrThrow();
   return id;
+}
+
+/**
+ * Every /v1 operation the server answers, as "PATCH /v1/events/{id}", read
+ * from Fastify's own route tree. Unlike the OpenAPI contract, this also
+ * lists routes hidden from the docs. HEAD is left out: Fastify adds it to
+ * every GET.
+ */
+export function v1Operations(app: App): string[] {
+  const segments: string[] = [];
+  const operations: string[] = [];
+  for (const line of app.printRoutes({ commonPrefix: false }).split('\n')) {
+    const node = /^((?:│ {3}| {4})*)[├└]── (\S+)(?: \(([^)]*)\))?$/.exec(line);
+    if (!node) continue;
+    const [, indent = '', segment = '', methods = ''] = node;
+    segments.length = indent.length / 4;
+    segments.push(segment);
+    const path = segments.join('').replace(/:(\w+)/g, '{$1}');
+    if (!path.startsWith('/v1/') && path !== '/v1') continue;
+    for (const method of methods.split(', ')) {
+      if (method && method !== 'HEAD') operations.push(`${method} ${path}`);
+    }
+  }
+  if (operations.length === 0) throw new Error('v1Operations: no /v1 routes found; did the route tree format change?');
+  return operations.sort();
+}
+
+/** The operation a test request calls, in the v1Operations form. */
+export function operationOf(method: string, url: string, eventId: string): string {
+  return `${method} ${(url.split('?')[0] ?? url).replaceAll(eventId, '{id}')}`;
 }

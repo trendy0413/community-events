@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type App, buildApp } from '../../src/app.js';
 import type { Problem } from '../../src/http/errors.js';
 import type { EventView } from '../../src/modules/events/schemas.js';
-import { createUser, testDb } from './helpers.js';
+import { createUser, operationOf, testDb, v1Operations } from './helpers.js';
 
 const db = testDb();
 let app: App;
@@ -75,14 +75,20 @@ describe('API', () => {
     }
   });
 
-  // Every /v1 route, each with input that is also invalid: if the identity
-  // check ran after validation, these would answer 400 instead of 401.
+  // Every /v1 route except /v1/health, each with input that is also invalid
+  // where it takes any: if the identity check ran after validation, these
+  // would answer 400 instead of 401.
   const EVERY_ROUTE = [
+    { method: 'GET', url: '/v1/me' },
+    { method: 'GET', url: '/v1/users' },
+    { method: 'GET', url: '/v1/events?limit=0' },
     { method: 'POST', url: '/v1/events', payload: { title: 'x' } },
     { method: 'GET', url: '/v1/events/not-a-uuid' },
+    { method: 'PATCH', url: '/v1/events/not-a-uuid', payload: {} },
     { method: 'GET', url: '/v1/events/not-a-uuid/registrations' },
     { method: 'PUT', url: '/v1/events/not-a-uuid/registrations/me' },
     { method: 'DELETE', url: '/v1/events/not-a-uuid/registrations/me' },
+    { method: 'GET', url: '/v1/me/registrations?limit=0' },
   ] as const;
 
   async function expectUnauthenticated(headers: Record<string, string>): Promise<void> {
@@ -98,6 +104,11 @@ describe('API', () => {
   it('R8 request without identity gets 401', async () => {
     await expectUnauthenticated({});
     await expectUnauthenticated({ 'x-dev-user-id': 'not-a-uuid' });
+
+    // The list must name every route the server answers, so a new route (or
+    // one registered outside the identity scope by mistake) cannot skip this.
+    const covered = EVERY_ROUTE.map((route) => operationOf(route.method, route.url, 'not-a-uuid'));
+    expect(v1Operations(app).filter((operation) => operation !== 'GET /v1/health').sort()).toEqual([...covered].sort());
   });
 
   it('R8 unknown user gets 401', async () => {
@@ -187,12 +198,15 @@ describe('API', () => {
     expect(malformed.statusCode).toBe(400);
     expect(malformed.json<Problem>().code).toBe('VALIDATION_FAILED');
 
-    for (const [method, url] of [
-      ['GET', `/v1/events/${randomUUID()}`],
-      ['PUT', `/v1/events/${randomUUID()}/registrations/me`],
-      ['DELETE', `/v1/events/${randomUUID()}/registrations/me`],
+    const organizer = await createUser(db, ['organizer']);
+    for (const [method, url, who, payload] of [
+      ['GET', `/v1/events/${randomUUID()}`, attendee, undefined],
+      ['PATCH', `/v1/events/${randomUUID()}`, organizer, { capacity: 5 }],
+      ['GET', `/v1/events/${randomUUID()}/registrations`, organizer, undefined],
+      ['PUT', `/v1/events/${randomUUID()}/registrations/me`, attendee, undefined],
+      ['DELETE', `/v1/events/${randomUUID()}/registrations/me`, attendee, undefined],
     ] as const) {
-      const res = await app.inject({ method, url, headers: as(attendee) });
+      const res = await app.inject({ method, url, headers: as(who), ...(payload && { payload }) });
       expect(res.statusCode, `${method} ${url}`).toBe(404);
       expect(res.json<Problem>().code).toBe('NOT_FOUND');
     }
