@@ -4,7 +4,7 @@ A REST API for community events. Organizers create events with a capacity, atten
 
 **Status:** the backend scope of the brief is complete (git tag `brief-complete`). The architecture document, the web client and the full write-up follow.
 
-The rules, the API contract and how the last seat stays safe are in [docs/SPEC.md](docs/SPEC.md).
+The rules, the API contract and how the last seat stays safe are in [docs/SPEC.md](docs/SPEC.md). The architecture, with diagrams and production notes, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 **Live demo** (fake data, nothing to install): [community-events-web.vercel.app](https://community-events-web.vercel.app), with Swagger UI at [/docs](https://community-events-web.vercel.app/docs). It runs on Vercel with a Neon PostgreSQL database.
 
