@@ -30,9 +30,10 @@ export const CreateEventBody = z.strictObject({
     .nullish()
     .transform((value) => value || null),
   // RFC 3339: an offset (or Z) is required, because a time without one means
-  // a different moment in every time zone.
+  // a different moment in every time zone. A value that is not a date stops
+  // there, so it does not also get "must be in the future".
   startsAt: z.iso
-    .datetime({ offset: true })
+    .datetime({ offset: true, abort: true })
     .refine((value) => Date.parse(value) > Date.now(), 'Must be in the future')
     .refine((value) => Date.parse(value) < Date.now() + YEAR_MS, 'Must be less than 1 year away'),
   timezone: z.string().transform((value, ctx) => {

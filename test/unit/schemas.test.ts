@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ListEventsQuery } from '../../src/modules/events/schemas.js';
+import { CreateEventBody, ListEventsQuery } from '../../src/modules/events/schemas.js';
 import { MyRegistrationsQuery } from '../../src/modules/registrations/schemas.js';
 
 describe('list queries', () => {
@@ -8,5 +8,13 @@ describe('list queries', () => {
       expect(schema.parse({}).limit).toBe(20);
       expect(schema.parse({ limit: '50' }).limit).toBe(50);
     }
+  });
+});
+
+describe('create event body', () => {
+  it('reports only the format error for a start that is not a date', () => {
+    const result = CreateEventBody.safeParse({ title: 'Board games', startsAt: '', timezone: 'UTC', capacity: 5 });
+
+    expect(result.error?.issues.map((issue) => issue.path.join('.'))).toEqual(['startsAt']);
   });
 });
