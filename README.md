@@ -111,7 +111,7 @@ I built this with Claude Code (an AI coding agent). [CLAUDE.md](CLAUDE.md), [web
 - **I decided** the scope and the cut order, the rules and their wording, the product assumptions, the stack, and what is demo-only.
 - **The AI drafted** the code, tests and docs, one commit per step, from the SPEC.
 - **How I checked:** CI on every push, the rule-to-test check, the mutants, the reviewer agent on each core change, and live runs of the proof page.
-- **Real corrections along the way:** the reviewer found that the demo reset's `TRUNCATE` contradicted "rows are never deleted" as the SPEC worded it, and that a seed test had been loosened (fixed in `e358cbe`); the first deploy failed three ways (Vercel picked the wrong entry file, an awaited `listen()` never returned, and an ES-module dependency could not be loaded; `8a13f42`); and the mutant check first reported every mutant as surviving in CI because of terminal color codes (`728d5d7`).
+- **Real corrections along the way:** the reviewer found that the demo reset's `TRUNCATE` contradicted "rows are never deleted" as the SPEC worded it, and that a seed test had been loosened (fixed in `f69bbda`); the first deploy failed three ways (Vercel picked the wrong entry file, an awaited `listen()` never returned, and an ES-module dependency could not be loaded; `4229f70`); and the mutant check first reported every mutant as surviving in CI because of terminal color codes (`96f56cf`).
 
 ## Time spent
 
