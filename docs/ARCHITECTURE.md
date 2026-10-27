@@ -164,7 +164,7 @@ Not chosen: Express (no built-in validation or contract), NestJS (heavy for one 
 
 ## 8. Scaling, security and third parties
 
-- **Scaling.** The API is stateless, so it scales out. Seat contention is per event row, so a hot event serializes its own registrations (about one short transaction each) while other events are unaffected. A connection pooler (PgBouncer, or the host's) keeps database connections bounded as instances grow. Add rate limits per user once there are real accounts.
+- **Scaling.** The API is stateless, so it scales out. Seat contention is per event row, so a hot event serializes its own registrations (about one short transaction each) while other events are unaffected. A connection pooler (PgBouncer, or the host's) keeps database connections bounded as instances grow. Add rate limits per user once there are real accounts. Set statement and lock timeouts per transaction (`SET LOCAL`, which works through a transaction-mode pooler) and answer 503 when one fires: today a stuck transaction would hold an event row until the host ends the request.
 - **Security.** Identity from a verified token, never from the body. Deny-by-default `can()` on every route. Response allow-lists, so a new column never leaks. Security headers on every response (`@fastify/helmet`). Input limits on every field (R10). Secrets only in the host's environment.
 - **Third parties.** Login (Clerk, Auth0 or Cognito), email (Postmark or SES), push (APNs and FCM), SMS (Twilio, with US business registration time planned in). All behind small interfaces, called from a queue rather than inside a request, so a provider outage never blocks a registration.
 
