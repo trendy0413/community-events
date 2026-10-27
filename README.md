@@ -130,7 +130,7 @@ From git timestamps (planning and the first spec draft before the first commit a
 
 ## Evidence
 
-From [CI run #35](https://github.com/trendy0413/community-events/actions/runs/40558861761) on commit `42270fd`, 2026-10-27:
+From [CI run #38](https://github.com/trendy0413/community-events/actions/runs/40563671852) on commit `5106dc4`, 2026-10-27:
 
 | Check | Result |
 |---|---|
