@@ -1,5 +1,6 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, type PostgresPool } from 'kysely';
 import pg from 'pg';
+import { isLostConnection } from './lost-connection.js';
 import type { Database } from './schema.js';
 
 export type Db = Kysely<Database>;
@@ -9,6 +10,34 @@ export interface DbOptions {
   max?: number;
   /** Called when an idle pooled connection fails. Defaults to stderr. */
   onIdleError?: (error: Error) => void;
+}
+
+const CONNECT_ATTEMPTS = 3;
+const CONNECT_RETRY_DELAY_MS = 200;
+
+/**
+ * Opening a connection can fail on its own: a database that scales to zero
+ * may drop the first one while it wakes, and a burst of new connections can
+ * be cut by a proxy. Nothing has run on such a connection yet, so trying
+ * again is always safe. Failures during a query are not retried here.
+ */
+function withConnectRetry(pool: pg.Pool): PostgresPool {
+  return {
+    // Kysely uses these for query cancellation, as on a plain pg.Pool.
+    Client: pg.Client,
+    options: pool.options,
+    async connect() {
+      for (let attempt = 1; ; attempt++) {
+        try {
+          return await pool.connect();
+        } catch (error) {
+          if (attempt >= CONNECT_ATTEMPTS || !isLostConnection(error)) throw error;
+          await new Promise((resolve) => setTimeout(resolve, CONNECT_RETRY_DELAY_MS * attempt));
+        }
+      }
+    },
+    end: () => pool.end(),
+  };
 }
 
 export function createDb(databaseUrl: string, options: DbOptions = {}): Db {
@@ -29,5 +58,5 @@ export function createDb(databaseUrl: string, options: DbOptions = {}): Db {
         console.error(`database: idle connection failed: ${error.message}`);
       }),
   );
-  return new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
+  return new Kysely<Database>({ dialect: new PostgresDialect({ pool: withConnectRetry(pool) }) });
 }

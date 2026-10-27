@@ -1,4 +1,5 @@
 import type { Db } from '../../db/client.js';
+import { isLostConnection } from '../../db/lost-connection.js';
 import { DomainError } from '../../http/errors.js';
 import {
   cancelActiveRegistration,
@@ -52,7 +53,25 @@ async function noSeatError(db: Db, eventId: string): Promise<DomainError> {
   return new DomainError('EVENT_FULL', `All ${state.capacity} seats are taken.`);
 }
 
+/**
+ * Runs a register or cancel once more if its connection drops (SPEC section
+ * 8). Safe because both are idempotent: a first try that did commit makes
+ * the second one return the existing registration, or cancel nothing.
+ */
+async function retryOnLostConnection<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    if (!isLostConnection(error)) throw error;
+    return run();
+  }
+}
+
 export async function register(db: Db, eventId: string, attendeeId: string): Promise<RegisterResult> {
+  return retryOnLostConnection(() => registerOnce(db, eventId, attendeeId));
+}
+
+async function registerOnce(db: Db, eventId: string, attendeeId: string): Promise<RegisterResult> {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       return await db.transaction().execute(async (trx) => {
@@ -90,6 +109,10 @@ export async function register(db: Db, eventId: string, attendeeId: string): Pro
 
 /** Returns whether a registration was cancelled; cancelling twice is not an error (R3). */
 export async function cancel(db: Db, eventId: string, attendeeId: string): Promise<{ cancelled: boolean }> {
+  return retryOnLostConnection(() => cancelOnce(db, eventId, attendeeId));
+}
+
+async function cancelOnce(db: Db, eventId: string, attendeeId: string): Promise<{ cancelled: boolean }> {
   return db.transaction().execute(async (trx) => {
     const cancelled = await cancelActiveRegistration(trx, eventId, attendeeId);
     if (!cancelled) {

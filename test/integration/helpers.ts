@@ -20,8 +20,14 @@ export async function createUser(db: Db, roles: Role[] = ['attendee']): Promise<
   return id;
 }
 
+/** One statement for all of them: setup should not open a connection per user. */
 export async function createUsers(db: Db, count: number, roles: Role[] = ['attendee']): Promise<string[]> {
-  return Promise.all(Array.from({ length: count }, () => createUser(db, roles)));
+  const rows = await db
+    .insertInto('users')
+    .values(Array.from({ length: count }, () => ({ email: `${randomUUID()}@example.com`, name: 'Test person', roles })))
+    .returning('id')
+    .execute();
+  return rows.map((row) => row.id);
 }
 
 /**

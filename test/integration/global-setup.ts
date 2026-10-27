@@ -34,7 +34,9 @@ function explain(error: unknown): string {
 }
 
 async function withClient<T>(url: string, run: (client: pg.Client) => Promise<T>): Promise<T> {
-  const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 5000 });
+  // Generous: a remote database through a VPN or proxy can take several
+  // seconds to accept a connection; a missing one still fails in seconds.
+  const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 20_000 });
   try {
     await client.connect();
   } catch (error) {
