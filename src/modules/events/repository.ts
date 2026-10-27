@@ -106,7 +106,7 @@ export async function updateCapacity(db: Db, eventId: string, organizerId: strin
     .where('id', '=', eventId)
     .where('organizer_id', '=', organizerId)
     .where('registered_count', '<=', capacity)
-    .where('starts_at', '>', sql<Date>`now()`)
+    .where('starts_at', '>', sql<Date>`clock_timestamp()`)
     .returning('id')
     .executeTakeFirst();
   return row !== undefined;
@@ -122,7 +122,7 @@ export interface CapacityState {
 export async function findCapacityState(db: Db, eventId: string): Promise<CapacityState | null> {
   const row = await db
     .selectFrom('events')
-    .select(['organizer_id', 'registered_count', sql<boolean>`starts_at <= now()`.as('started')])
+    .select(['organizer_id', 'registered_count', sql<boolean>`starts_at <= clock_timestamp()`.as('started')])
     .where('id', '=', eventId)
     .executeTakeFirst();
   return row ? { organizerId: row.organizer_id, started: row.started, registeredCount: row.registered_count } : null;

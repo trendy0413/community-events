@@ -59,7 +59,10 @@ export async function findActiveRegistration(trx: Trx, eventId: string, attendee
 /**
  * Register step 2: take one seat if one is free and the event has not
  * started. The WHERE is checked again after waiting for another transaction's
- * lock on this row, so two requests can never both take the last seat.
+ * lock on this row, so two requests can never both take the last seat. The
+ * start is compared with clock_timestamp(), the time of that check: now() is
+ * the time the transaction began, and a request that waited on the lock past
+ * the start would still get in (R4).
  * Returns false when no seat was taken.
  */
 export async function takeSeat(trx: Trx, eventId: string): Promise<boolean> {
@@ -68,7 +71,7 @@ export async function takeSeat(trx: Trx, eventId: string): Promise<boolean> {
     .set((eb) => ({ registered_count: eb('registered_count', '+', 1) }))
     .where('id', '=', eventId)
     .whereRef('registered_count', '<', 'capacity')
-    .where('starts_at', '>', sql<Date>`now()`)
+    .where('starts_at', '>', sql<Date>`clock_timestamp()`)
     .returning('id')
     .executeTakeFirst();
   return row !== undefined;
@@ -97,7 +100,7 @@ export async function freeSeat(trx: Trx, eventId: string): Promise<boolean> {
     .updateTable('events')
     .set((eb) => ({ registered_count: eb('registered_count', '-', 1) }))
     .where('id', '=', eventId)
-    .where('starts_at', '>', sql<Date>`now()`)
+    .where('starts_at', '>', sql<Date>`clock_timestamp()`)
     .returning('id')
     .executeTakeFirst();
   return row !== undefined;
@@ -143,7 +146,7 @@ export interface EventSeatState {
 export async function findEventSeatState(db: Kysely<Database>, eventId: string): Promise<EventSeatState | null> {
   const row = await db
     .selectFrom('events')
-    .select(['capacity', sql<boolean>`starts_at <= now()`.as('started')])
+    .select(['capacity', sql<boolean>`starts_at <= clock_timestamp()`.as('started')])
     .where('id', '=', eventId)
     .executeTakeFirst();
   return row ?? null;

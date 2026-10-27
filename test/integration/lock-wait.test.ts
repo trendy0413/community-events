@@ -39,7 +39,8 @@ async function holdLastSeat(eventId: string, attendeeId: string) {
     .catch((error: unknown) => {
       if (!(error instanceof RolledBack)) throw error;
     });
-  await holding;
+  // If booking A fails before it holds the seat, fail now instead of waiting.
+  await Promise.race([holding, done]);
   return { pid: () => pid, finish, done };
 }
 
@@ -72,6 +73,28 @@ describe('lock wait on the last seat', () => {
     await first.done;
 
     expect(await second).toBe('EVENT_FULL');
+    expect(await seatCounts(db, event)).toEqual({ registeredCount: 1, activeRows: 1 });
+  });
+
+  it('R4 a booking that waits on a lock past the start is rejected', async () => {
+    const [organizer, a, b] = [await createUser(db, ['organizer']), await createUser(db), await createUser(db)];
+    // Two seats, so only the start time can stop the second booking. The
+    // start leaves time for both bookings to begin, even on a remote database.
+    const startsAt = new Date(Date.now() + 6000);
+    const event = await createEvent(db, organizer, { capacity: 2, startsAt });
+
+    const first = await holdLastSeat(event, a);
+    const second = register(db, event, b).then(
+      () => 'seat',
+      (error: unknown) => (error instanceof DomainError ? error.code : String(error)),
+    );
+    await waitUntilBlockedBy(first.pid());
+    // The second booking's transaction began before the start; its check runs after.
+    await new Promise((resolve) => setTimeout(resolve, Math.max(startsAt.getTime() - Date.now() + 500, 0)));
+    first.finish(true);
+    await first.done;
+
+    expect(await second).toBe('EVENT_STARTED');
     expect(await seatCounts(db, event)).toEqual({ registeredCount: 1, activeRows: 1 });
   });
 

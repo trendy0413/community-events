@@ -4,8 +4,8 @@
     "rule": "R1",
     "breaks": "takeSeat no longer checks for a free seat",
     "file": "src/modules/registrations/repository.ts",
-    "find": "    .whereRef('registered_count', '<', 'capacity')\n    .where('starts_at', '>', sql<Date>`now()`)\n",
-    "replace": "    .where('starts_at', '>', sql<Date>`now()`)\n",
+    "find": "    .whereRef('registered_count', '<', 'capacity')\n    .where('starts_at', '>', sql<Date>`clock_timestamp()`)\n",
+    "replace": "    .where('starts_at', '>', sql<Date>`clock_timestamp()`)\n",
     "tests": ["test/integration/registrations.test.ts"],
     "pattern": "R1 "
   },
@@ -34,7 +34,7 @@
     "rule": "R4",
     "breaks": "takeSeat no longer checks that the event has not started",
     "file": "src/modules/registrations/repository.ts",
-    "find": "    .whereRef('registered_count', '<', 'capacity')\n    .where('starts_at', '>', sql<Date>`now()`)\n",
+    "find": "    .whereRef('registered_count', '<', 'capacity')\n    .where('starts_at', '>', sql<Date>`clock_timestamp()`)\n",
     "replace": "    .whereRef('registered_count', '<', 'capacity')\n",
     "tests": ["test/integration/registrations.test.ts"],
     "pattern": "R4 "
