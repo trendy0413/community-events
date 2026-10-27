@@ -18,11 +18,13 @@ npm run test:unit          # tests that need no database
 npm run lint               # ESLint, then the rule-to-test check
 npm run check:rules        # SPEC rule IDs vs test names; `npm run check:rules -- --strict` also fails on missing tests
 npm run typecheck
-npm run openapi            # export openapi/openapi.json from the route schemas
+npm run openapi            # export openapi/openapi.json from the route schemas, then regenerate web/src/api/schema.d.ts
 npm run check:openapi      # fail if openapi/openapi.json is not valid OpenAPI or is out of date (CI runs this)
 npm run mutants            # only if mutants/ exists: each mutant must be caught by a test
 npm --prefix web run dev   # web client on http://localhost:5173 (proxies /v1 to the API)
-npm --prefix web run build # production web build
+npm --prefix web run lint  # web lint, including the W1 rule (no imports from src/)
+npm --prefix web test      # web logic tests
+npm --prefix web run build # production web build into web/dist
 ```
 
 `npm run dev` and the test scripts set `AUTH_MODE=dev-stub`. Without it the server refuses to start (R9).
@@ -43,7 +45,8 @@ src/http/openapi.ts      OpenAPI components: schemas named with .meta({ id }), u
 src/http/v1.ts           the /v1 scope: identity check, then the module routes
 src/modules/<feature>/   routes.ts, service.ts, repository.ts, schemas.ts
 migrations/*.sql         schema changes, add-only
-vercel.json              demo hosting on Vercel; its build runs scripts/vercel-build.ts (migrations)
+vercel.json              demo API on Vercel; its build runs scripts/vercel-build.ts (migrations)
+web/vercel.json          demo web client, a second Vercel project that forwards /v1, /docs, /openapi.json to the API
 scripts/                 repo tooling, for example the rule-to-test check
 test/unit/               no database
 test/integration/        real PostgreSQL

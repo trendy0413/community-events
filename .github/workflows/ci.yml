@@ -43,6 +43,30 @@ jobs:
       - name: Tests (unit + integration on PostgreSQL 16)
         run: npm test
 
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Lint (includes the W1 rule)
+        run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Generated API types match the contract
+        run: |
+          npm run api:types
+          git diff --exit-code -- src/api/schema.d.ts
+      - run: npm run build
+
   # Development happens on Windows; this catches path and line-ending
   # problems that the Linux job cannot see.
   windows:

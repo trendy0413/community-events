@@ -18,7 +18,7 @@
     "test:unit": "cross-env AUTH_MODE=dev-stub vitest run --project unit",
     "lint": "eslint . && npm run check:rules",
     "check:rules": "tsx scripts/check-rule-tests.ts",
-    "openapi": "tsx scripts/export-openapi.ts",
+    "openapi": "tsx scripts/export-openapi.ts && npm --prefix web run api:types",
     "check:openapi": "tsx scripts/export-openapi.ts --check",
     "typecheck": "tsc --noEmit",
     "vercel-build": "node --import tsx scripts/vercel-build.ts"

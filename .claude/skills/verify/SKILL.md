@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Run every check in this repo (lint, typecheck, unit tests, database tests, OpenAPI drift, mutants, web build) and report a short pass/fail table. Use before each commit and before saying a task is done.
+description: Run every check in this repo (lint, typecheck, unit tests, database tests, OpenAPI drift, mutants, web checks and build) and report a short pass/fail table. Use before each commit and before saying a task is done.
 ---
 
 # Verify
@@ -13,6 +13,6 @@ Run the checks in this order. Stop at the first failing check. Show the failing 
 4. `npm test`. This needs PostgreSQL (`DATABASE_URL`, or `npm run db:up`). If it stops with the "needs PostgreSQL 16" message, report that. It is not a pass.
 5. `npm run check:openapi`. It fails if the contract is not valid OpenAPI or `openapi/openapi.json` is out of date. If it is out of date, run `npm run openapi`, keep the new file and say so.
 6. Only if `mutants/` exists: `npm run mutants`. Every mutant must be caught by a test.
-7. Only if `web/` exists: `npm --prefix web run build`.
+7. Only if `web/` exists: `npm --prefix web run lint`, `npm --prefix web run typecheck`, `npm --prefix web test`, then `npm --prefix web run build`.
 
 Report a table: check | result | notes. Name any check you did not run, and why.

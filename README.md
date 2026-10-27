@@ -6,7 +6,7 @@ A REST API for community events. Organizers create events with a capacity, atten
 
 The rules, the API contract and how the last seat stays safe are in [docs/SPEC.md](docs/SPEC.md).
 
-**Live demo** (fake data; the web client follows): the API and its Swagger UI run at [community-events-rho.vercel.app/docs](https://community-events-rho.vercel.app/docs), on Vercel with a Neon PostgreSQL database.
+**Live demo** (fake data, nothing to install): [community-events-web.vercel.app](https://community-events-web.vercel.app), with Swagger UI at [/docs](https://community-events-web.vercel.app/docs). It runs on Vercel with a Neon PostgreSQL database.
 
 ## Instructions for running the application
 
