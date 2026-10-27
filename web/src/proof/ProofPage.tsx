@@ -5,25 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { api } from '../api/client';
 import { useHealth } from '../api/queries';
 import { ProblemNotice } from '../components/ProblemNotice';
-import { crowd, proofOrganizer } from '../demo/people';
 import { RACE_TESTS_URL, SEAT_SQL_URL, SPEC_URL } from '../links';
+import { CancelPanel, PermissionsPanel } from './MorePanels';
 import { DatabaseCheck, OutcomeTiles, TimingBars } from './RaceResults';
-import { PRESETS, type Race, type RaceDeps, readBack, type ReadBack, runRace, tally, timing, verdict } from './race';
-
-const deps: RaceDeps = {
-  api,
-  organizer: proofOrganizer,
-  crowd,
-  now: () => performance.now(),
-  today: () => new Date(),
-};
+import { deps } from './deps';
+import { PRESETS, type Race, readBack, type ReadBack, runRace, tally, timing, verdict } from './race';
 
 type Step = 'idle' | 'running' | 'reading' | 'done' | 'failed';
 
 export function ProofPage() {
+  const [lastRace, setLastRace] = useState<Race | null>(null);
   return (
     <div className="space-y-8">
       <header className="max-w-2xl space-y-2">
@@ -32,7 +25,9 @@ export function ProofPage() {
           Every button hits the live server and a real database. Nothing is simulated.
         </p>
       </header>
-      <RacePanel />
+      <RacePanel onFinished={setLastRace} />
+      <CancelPanel race={lastRace} />
+      <PermissionsPanel />
       <footer className="space-y-2 rounded-xl border bg-muted/40 p-4 text-sm">
         <p className="font-medium">This page shows that it works. The tests show why.</p>
         <p className="text-muted-foreground">
@@ -60,7 +55,7 @@ function FooterLink({ href, children }: { href: string; children: string }) {
   );
 }
 
-function RacePanel() {
+function RacePanel({ onFinished }: { onFinished: (race: Race) => void }) {
   const health = useHealth();
   const ready = health.data?.db === 'ok';
   const [presetId, setPresetId] = useState(PRESETS[0]?.id ?? '');
@@ -82,6 +77,7 @@ function RacePanel() {
       setStep('reading');
       setBack(await readBack(deps, result.eventId));
       setStep('done');
+      onFinished(result);
     } catch (failure) {
       setError(failure);
       setStep('failed');
