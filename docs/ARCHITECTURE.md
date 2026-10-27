@@ -79,7 +79,7 @@ erDiagram
 ```
 
 - **One active registration per person per event** is a partial unique index (`WHERE status = 'active'`). A cancelled row stays as history, so the same person can register again.
-- **Registrations are never deleted.** A trigger rejects `DELETE`, and the foreign keys use `ON DELETE RESTRICT`. The seat count can only change through the registration service.
+- **Registrations are never deleted.** A trigger rejects `DELETE`, and the foreign keys use `ON DELETE RESTRICT`. The seat count can only change through the registration service. The one exception is the demo reset and the test setup, which empty all three tables in one `TRUNCATE`, so counts and rows reach zero together.
 - **`registered_count`** is stored on the event, with `CHECK (registered_count BETWEEN 0 AND capacity)`. Section 5 explains why a counter and not `COUNT(*)`.
 - A person can hold several roles; an organizer who also attends has both.
 
@@ -116,8 +116,8 @@ sequenceDiagram
   participant A as Request A
   participant B as Request B
   participant DB as PostgreSQL
-  A->>DB: BEGIN; INSERT registration (A)
-  B->>DB: BEGIN; INSERT registration (B)
+  A->>DB: BEGIN, then INSERT registration (A)
+  B->>DB: BEGIN, then INSERT registration (B)
   A->>DB: UPDATE events SET registered_count + 1<br/>WHERE registered_count < capacity
   Note over DB: A holds the event row lock
   B->>DB: the same UPDATE
@@ -159,7 +159,7 @@ Not chosen: Express (no built-in validation or contract), NestJS (heavy for one 
 | Read-only admin | Suspend users, change roles, audit log |
 | Web client | iOS and Android apps on the same contract |
 | One region, one database | Read replicas, caching for read-heavy pages |
-| Logs per request | Error tracking, traces, alerts (section 8) |
+| Logs per request | Error tracking, traces, alerts (section 9) |
 | No notifications | Email and push through a queue with an outbox table |
 
 ## 8. Scaling, security and third parties

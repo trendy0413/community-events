@@ -7,8 +7,8 @@ A REST API for community events: organizers create events with a capacity, atten
 ## What to check first
 
 - **The seat limit is enforced by the database.** One conditional `UPDATE ... WHERE registered_count < capacity` plus a `CHECK` constraint ([the SQL](src/modules/registrations/repository.ts)). [The race tests](test/integration/registrations.test.ts) send 50 parallel registrations for 10 seats on real PostgreSQL, with a pool of 60 connections so the calls really overlap; [the lock-wait tests](test/integration/lock-wait.test.ts) show the second booking waiting for the first.
-- **Retry-safe register and cancel.** A phone that resends on a weak network never books twice and never gets an error for a booking that worked: `PUT` and `DELETE` on `/v1/events/{id}/registrations/me` (R2, R3 tests in the same file).
-- **One deny-by-default permission check.** Every route calls `can()` ([src/auth/policy.ts](src/auth/policy.ts)); [a test](test/unit/policy.test.ts) checks every cell of the role-by-action table.
+- **Retry-safe register and cancel.** A phone that resends on a weak network never books twice and never gets an error for a booking that worked: `PUT` and `DELETE` on `/v1/events/{id}/registrations/me` (R2, R3 tests in the same file, and [the dropped-connection tests](test/integration/registrations-retry.test.ts)).
+- **One deny-by-default permission check.** Every `/v1` route except `/v1/health` calls `can()` ([src/auth/policy.ts](src/auth/policy.ts)); [a test](test/unit/policy.test.ts) checks every cell of the role-by-action table.
 - **Every rule has a test, and the tests are tested.** CI fails if a SPEC rule has no test named after it, and [7 deliberate breaks](mutants/mutants.json) must each fail a test.
 - **No personal data can enter the demo.** No sign-up; only seeded `@example.com` people; the reset refuses a database with anyone else.
 
@@ -27,7 +27,7 @@ npm run dev        # API on http://localhost:3000, Swagger UI on http://localhos
 - **No Docker?** Put the connection string of any PostgreSQL 16 database in a `.env` file (see [.env.example](.env.example)) and skip `npm run db:up`.
 - **Web client:** `npm --prefix web install`, then `npm --prefix web run dev` (http://localhost:5173, forwards `/v1` to the API).
 - **Tests:** `npm test` (unit and integration; without a database it stops in seconds with a clear message and never skips), `npm run lint`, `npm run typecheck`, `npm run mutants`, and `npm --prefix web test`.
-- **Nothing to set up:** [CI](.github/workflows/ci.yml) runs all of this on every push, including once exactly as written above with Docker.
+- **Nothing to set up:** [CI](.github/workflows/ci.yml) runs all of this on every push, including the Docker steps above (install, `db:up`, migrate, seed, test).
 
 The integration tests use their own database (`<your database>_test`, created on the first run) and empty it at the start, so your dev data is never touched. `npm run demo:reset` wipes the dev database and seeds it again with some seats taken.
 

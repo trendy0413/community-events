@@ -215,7 +215,7 @@ A validation error adds `errors`:
   "status": 400,
   "code": "VALIDATION_FAILED",
   "detail": "The request has invalid fields.",
-  "errors": [{ "field": "capacity", "message": "Must be at least 1" }]
+  "errors": [{ "field": "capacity", "message": "Too small: expected number to be >=1" }]
 }
 ```
 
@@ -225,7 +225,7 @@ A validation error adds `errors`:
 |---|---|---|
 | `VALIDATION_FAILED` | 400 | Bad body, query or path value (for example a malformed UUID) |
 | `UNAUTHENTICATED` | 401 | Missing, malformed or unknown identity (R8) |
-| `FORBIDDEN` | 403 | The identity is known but not allowed (R5, R6, `scope=past` without the admin role) |
+| `FORBIDDEN` | 403 | The identity is known but not allowed (R5, R6, `scope=past` without the admin role, or any role that lacks the action in section 4) |
 | `NOT_FOUND` | 404 | The event or the route does not exist |
 | `EVENT_FULL` | 409 | No seats left (R1) |
 | `EVENT_STARTED` | 409 | The event has started (R4, R7) |
@@ -250,7 +250,7 @@ The seat count is kept in `events.registered_count`. It changes only inside thes
 2. Only when a row changed: `UPDATE events SET registered_count = registered_count - 1 WHERE id = $1 AND starts_at > now() RETURNING id`.
    - If no row comes back, the event has started: roll back and return `EVENT_STARTED`.
 
-**Capacity change:** `can()` first checks that the caller owns the event (`FORBIDDEN` if not). Then one `UPDATE events SET capacity = $2, updated_at = now() WHERE id = $1 AND organizer_id = $3 AND registered_count <= $2 AND starts_at > now() RETURNING *`. The `organizer_id` condition is a second guard. If no row comes back, read the event again and return the first reason that still holds: `NOT_FOUND`, `FORBIDDEN` (another owner), `EVENT_STARTED`, or `CAPACITY_BELOW_REGISTERED` (more people registered than the new capacity). If none holds, a cancel committed in between: run the `UPDATE` again, up to 3 attempts in total (then `INTERNAL_ERROR`, as for register).
+**Capacity change:** `can()` first checks that the caller owns the event (`FORBIDDEN` if not). Then one `UPDATE events SET capacity = $2, updated_at = now() WHERE id = $1 AND organizer_id = $3 AND registered_count <= $2 AND starts_at > now() RETURNING id`. The `organizer_id` condition is a second guard. If no row comes back, read the event again and return the first reason that still holds: `NOT_FOUND`, `FORBIDDEN` (another owner), `EVENT_STARTED`, or `CAPACITY_BELOW_REGISTERED` (more people registered than the new capacity). If none holds, a cancel committed in between: run the `UPDATE` again, up to 3 attempts in total (then `INTERNAL_ERROR`, as for register).
 
 Why this is safe:
 - Under READ COMMITTED, a second `UPDATE` on the same event row waits for the first transaction to finish. Then it checks its `WHERE` again on the newest row. So the last seat goes to exactly one transaction.

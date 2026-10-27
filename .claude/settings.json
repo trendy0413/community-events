@@ -16,6 +16,8 @@
       "Bash(npm --prefix web run lint)",
       "Bash(npm --prefix web run typecheck)",
       "Bash(npm --prefix web test)",
+      "Bash(npm --prefix web run format:check)",
+      "Bash(npm --prefix web run api:types)",
       "Bash(git status)",
       "Bash(git status *)",
       "Bash(git diff)",
