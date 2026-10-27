@@ -1,0 +1,4 @@
+dist/
+src/components/ui/
+src/api/schema.d.ts
+package-lock.json

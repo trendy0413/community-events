@@ -59,6 +59,7 @@ jobs:
       - run: npm ci
       - name: Lint (includes the W1 rule)
         run: npm run lint
+      - run: npm run format:check
       - run: npm run typecheck
       - run: npm test
       - name: Generated API types match the contract

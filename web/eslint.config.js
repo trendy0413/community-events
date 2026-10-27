@@ -25,15 +25,21 @@ const noApiImports = {
       const source = node.source;
       if (source?.type !== 'Literal' || typeof source.value !== 'string' || !source.value.startsWith('.')) return;
       const target = path.resolve(path.dirname(context.filename), source.value);
-      if (target === API_SOURCE || target.startsWith(API_SOURCE + path.sep)) context.report({ node: source, messageId: 'api' });
+      if (target === API_SOURCE || target.startsWith(API_SOURCE + path.sep))
+        context.report({ node: source, messageId: 'api' });
     };
-    return { ImportDeclaration: check, ExportAllDeclaration: check, ExportNamedDeclaration: check, ImportExpression: check };
+    return {
+      ImportDeclaration: check,
+      ExportAllDeclaration: check,
+      ExportNamedDeclaration: check,
+      ImportExpression: check,
+    };
   },
 };
 
 export default defineConfig(
-  // Generated: shadcn/ui components and the API types.
-  { ignores: ['src/components/ui/', 'src/api/schema.d.ts'] },
+  // Build output, and generated code: shadcn/ui components and the API types.
+  { ignores: ['dist/', 'src/components/ui/', 'src/api/schema.d.ts'] },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   reactHooks.configs.flat.recommended,

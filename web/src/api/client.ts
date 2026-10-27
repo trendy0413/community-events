@@ -1,4 +1,5 @@
-import createClient, { type Client } from 'openapi-fetch';
+import createClient, { type Client, type Middleware } from 'openapi-fetch';
+import { currentPersonId } from '../identity';
 import type { components, paths } from './schema';
 
 // The only way the web client talks to the API: a client generated from the
@@ -14,7 +15,24 @@ export function createApi(options: { baseUrl?: string; fetch?: typeof fetch } = 
   return createClient<paths>({ baseUrl: options.baseUrl ?? '', ...(options.fetch ? { fetch: options.fetch } : {}) });
 }
 
+export const IDENTITY_HEADER = 'X-Dev-User-Id';
+
+/** Sends the picked person's id (SPEC section 9). A call that names its own person, as the proof page does, keeps it. */
+const identity: Middleware = {
+  onRequest({ request }) {
+    const id = currentPersonId();
+    if (id && !request.headers.has(IDENTITY_HEADER)) request.headers.set(IDENTITY_HEADER, id);
+    return request;
+  },
+};
+
 export const api = createApi();
+api.use(identity);
+
+/** Headers that make one call as the given person. */
+export function as(personId: string): { headers: Record<string, string> } {
+  return { headers: { [IDENTITY_HEADER]: personId } };
+}
 
 /** A failed call: the HTTP status (0 when the server could not be reached) and the problem+json body, if any. */
 export class ApiError extends Error {
