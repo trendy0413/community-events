@@ -23,7 +23,7 @@ export function AppShell() {
         Skip to content
       </a>
       <p className="bg-amber-50 px-4 py-1.5 text-center text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100">
-        Demo: pick a person, no password. Fake data only. Real sign-in is not built yet.
+        Demo: pick a person, no password. Fake data only, reset every night. Real sign-in is not built yet.
       </p>
       <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur supports-backdrop-filter:bg-background/70">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">

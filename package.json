@@ -21,6 +21,7 @@
     "openapi": "tsx scripts/export-openapi.ts && npm --prefix web run api:types",
     "check:openapi": "tsx scripts/export-openapi.ts --check",
     "typecheck": "tsc --noEmit",
+    "smoke": "tsx scripts/smoke.ts",
     "mutants": "node --env-file-if-exists=.env --import tsx scripts/mutants.ts",
     "vercel-build": "node --import tsx scripts/vercel-build.ts"
   },

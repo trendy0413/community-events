@@ -12,6 +12,7 @@ npm run db:up              # PostgreSQL 16 in Docker on localhost:15432 (or set 
 npm run migrate            # apply migrations/*.sql
 npm run seed               # demo people and events
 npm run demo:reset         # wipe and re-seed; refuses a database with people outside the seed file
+npm run smoke              # check a running server from outside (SMOKE_URL, default the local API)
 npm run dev                # API on http://localhost:3000, Swagger UI at /docs
 npm test                   # all tests; without PostgreSQL it stops within seconds with a "needs PostgreSQL 16" message (it never skips)
 npm run test:unit          # tests that need no database

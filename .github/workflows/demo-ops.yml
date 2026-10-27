@@ -1,0 +1,36 @@
+name: Demo ops
+
+# The live demo (fake data only): every night, check it after a day of
+# visitors, wipe and re-seed it, then check it again. Removed when the demo
+# ends.
+on:
+  schedule:
+    - cron: '0 7 * * *' # 07:00 UTC, 03:00 in New York
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: demo-ops
+
+jobs:
+  reset-and-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SMOKE_URL: https://community-events-web.vercel.app
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Check the live demo after a day of visitors
+        run: npm run smoke
+      - name: Reset the demo data
+        run: npm run demo:reset
+        env:
+          DATABASE_URL_UNPOOLED: ${{ secrets.DEMO_DATABASE_URL_UNPOOLED }}
+      - name: Check it again
+        run: npm run smoke
