@@ -96,6 +96,7 @@
       "title": "Board game night",
       "description": "Bring a game, or learn a new one. Snacks provided.",
       "startsInDays": 5,
+      "localTime": "19:00",
       "timezone": "America/New_York",
       "capacity": 10,
       "crowdRegistrations": 7
@@ -106,6 +107,7 @@
       "title": "Intro to pottery",
       "description": "A small hands-on class. All materials included.",
       "startsInDays": 3,
+      "localTime": "10:30",
       "timezone": "America/New_York",
       "capacity": 2,
       "crowdRegistrations": 1
@@ -113,9 +115,10 @@
     {
       "id": "6f1c0e2a-7b3d-4e00-9b02-000000000003",
       "organizerId": "0d3c2f6e-1a1b-4c00-8a01-000000000002",
-      "title": "Saturday park cleanup",
+      "title": "Neighborhood park cleanup",
       "description": "Gloves and bags provided. Meet at the main gate.",
       "startsInDays": 12,
+      "localTime": "09:00",
       "timezone": "America/Chicago",
       "capacity": 25,
       "crowdRegistrations": 12

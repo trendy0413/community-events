@@ -30,6 +30,8 @@ const SeedSchema = z
         title: z.string().min(3).max(80),
         description: z.string().max(500),
         startsInDays: z.number().int().min(1).max(300),
+        /** Wall-clock start time in the event's time zone, 24-hour HH:MM. */
+        localTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
         timezone: z.string().min(1),
         capacity: z.number().int().min(1).max(500),
         /** Seats the demo reset takes, by the first crowd members. */
@@ -59,9 +61,6 @@ export function loadSeedData(): SeedData {
 export function seedPeople(data: SeedData): SeedData['people'] {
   return [...data.people, data.proofOrganizer, ...data.crowd];
 }
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const HOUR_MS = 60 * 60 * 1000;
 
 /**
  * Upserts the demo people and events. Safe to run again: fixed IDs, and
@@ -146,9 +145,6 @@ async function wipeAndSeed(trx: Kysely<Database>, data: SeedData, now: Date): Pr
 }
 
 async function upsertSeedRows(db: Kysely<Database>, data: SeedData, now: Date): Promise<void> {
-  // Whole hours read better on event pages than the second the seed ran.
-  const startOfHour = Math.ceil(now.getTime() / HOUR_MS) * HOUR_MS;
-
   // One statement per table: the database may be far away, and each round
   // trip costs more than the rows themselves.
   await db
@@ -171,7 +167,10 @@ async function upsertSeedRows(db: Kysely<Database>, data: SeedData, now: Date): 
         organizer_id: event.organizerId,
         title: event.title,
         description: event.description,
-        starts_at: new Date(startOfHour + event.startsInDays * DAY_MS),
+        // The event's local date of now, plus startsInDays, at localTime.
+        // PostgreSQL does the time zone math, daylight saving time included.
+        starts_at: sql<Date>`(date_trunc('day', ${now}::timestamptz AT TIME ZONE ${event.timezone})
+          + make_interval(days => ${event.startsInDays}::int) + ${event.localTime}::time) AT TIME ZONE ${event.timezone}`,
         timezone: event.timezone,
         capacity: event.capacity,
       })),
