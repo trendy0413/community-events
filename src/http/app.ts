@@ -46,6 +46,21 @@ export async function buildApp(options: AppOptions) {
   app.decorateRequest('actor', null);
   registerErrorHandling(app);
 
+  // Some HTTP clients, several mobile ones among them, send
+  // "Content-Type: application/json" on a PUT or DELETE with no body. Register
+  // and cancel take no body, so an empty one counts as none; a route that
+  // needs a body still rejects it through its schema.
+  const parseJson = app.getDefaultJsonParser('error', 'error');
+  app.removeContentTypeParser('application/json');
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (request, body, done) => {
+    if (body === '') {
+      done(null, undefined);
+      return;
+    }
+    // Calls done; its result type also allows a promise, which it does not return here.
+    void parseJson(request, body.toString(), done);
+  });
+
   app.addHook('onRequest', async (request, reply) => {
     reply.header('x-request-id', request.id);
     // Seat counts change every second during a rush; a cached copy would

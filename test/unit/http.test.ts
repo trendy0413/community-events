@@ -19,6 +19,7 @@ afterAll(() => db.destroy());
 async function appWithTestRoutes(): Promise<App> {
   app = await buildApp({ db, authMode: 'dev-stub', logLevel: 'silent' });
   app.post('/v1/test/validate', { schema: { body: z.object({ capacity: z.number().int().min(1) }) } }, () => ({ ok: true }));
+  app.put('/v1/test/no-body', () => ({ ok: true }));
   app.get('/v1/test/full', () => {
     throw new DomainError('EVENT_FULL', 'All 10 seats are taken.');
   });
@@ -90,6 +91,17 @@ describe('HTTP contract', () => {
       detail: 'The request has invalid fields.',
       errors: [{ field: 'request', message: body.errors?.[0]?.message }],
     });
+  });
+
+  it('treats an empty JSON body as no body, and still rejects it where a body is required', async () => {
+    const server = await appWithTestRoutes();
+    const json = { 'content-type': 'application/json' };
+
+    const put = await server.inject({ method: 'PUT', url: '/v1/test/no-body', headers: json, payload: '' });
+    expect(put.statusCode).toBe(200);
+    const post = await server.inject({ method: 'POST', url: '/v1/test/validate', headers: json, payload: '' });
+    expect(post.statusCode).toBe(400);
+    expect(post.json<Problem>().code).toBe('VALIDATION_FAILED');
   });
 
   it('maps a malformed URL to VALIDATION_FAILED, not the framework default', async () => {
