@@ -16,7 +16,7 @@ npm run smoke              # check a running server from outside (SMOKE_URL, def
 npm run dev                # API on http://localhost:3000, Swagger UI at /docs
 npm test                   # all tests; without PostgreSQL it stops within seconds with a "needs PostgreSQL 16" message (it never skips)
 npm run test:unit          # tests that need no database
-npm run lint               # ESLint, then the rule-to-test check
+npm run lint               # ESLint, then the rule-to-test check (strict: every test the SPEC lists must exist)
 npm run check:rules        # SPEC rule IDs vs test names; `npm run check:rules -- --strict` also fails on missing tests
 npm run typecheck
 npm run openapi            # export openapi/openapi.json from the route schemas, then regenerate web/src/api/schema.d.ts

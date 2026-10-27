@@ -16,7 +16,7 @@
     "demo:reset": "node --env-file-if-exists=.env --import tsx scripts/demo-reset.ts",
     "test": "cross-env AUTH_MODE=dev-stub vitest run",
     "test:unit": "cross-env AUTH_MODE=dev-stub vitest run --project unit",
-    "lint": "eslint . && npm run check:rules",
+    "lint": "eslint . && npm run check:rules -- --strict",
     "check:rules": "tsx scripts/check-rule-tests.ts",
     "openapi": "tsx scripts/export-openapi.ts && npm --prefix web run api:types",
     "check:openapi": "tsx scripts/export-openapi.ts --check",
