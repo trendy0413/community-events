@@ -94,7 +94,7 @@ More, with diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 1. Managed sign-in with tokens verified at the API, MFA for admins. Today anyone can act as anyone.
 2. Company-owned accounts, paid hosting tiers, separate staging and production databases, backups with a tested restore.
-3. Monitoring: the MVP set is built (Sentry, request ids, an uptime check and a count alert every 30 minutes, [monitor.yml](.github/workflows/monitor.yml)). For real users: a Sentry project per environment with an on-call route, and uptime checks every minute from more than one region.
+3. Monitoring: the MVP set is built and on for the live demo (Sentry errors, request ids, Sentry's uptime check on `/v1/health` every 20 minutes, and a count alert every 30 minutes, [monitor.yml](.github/workflows/monitor.yml)). For real users: a Sentry project per environment with an on-call route, and uptime checks every minute from more than one region.
 4. Per-user rate limits and abuse protection.
 5. Retention rules and in-app account deletion.
 
