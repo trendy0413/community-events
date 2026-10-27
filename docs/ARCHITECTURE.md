@@ -1,6 +1,6 @@
 # Architecture
 
-A platform for community events: organizers create events with a capacity, attendees register and cancel, admins oversee. Web, iOS and Android clients all use one REST API. This build has the API, its database and a web client; the mobile apps, real sign-in and notifications are designed here but not built.
+A platform for community events: organizers create events with a capacity, attendees register and cancel, admins oversee. The same API also runs a jobsite supply flow (section 11): suppliers publish delivery slots, contractors order material to a jobsite, and drivers take the delivery jobs. Web, iOS and Android clients all use one REST API. This build has the API, its database and a web client; the mobile apps, real sign-in and notifications are designed here but not built.
 
 The rules this architecture serves are in [SPEC.md](SPEC.md). This page explains the structure and the choices.
 
@@ -19,6 +19,7 @@ flowchart LR
     events["events module"]
     registrations["registrations module<br/>the only code that changes seat counts"]
     users["users module"]
+    supply["supply module<br/>slots, orders, delivery jobs"]
   end
   db[("PostgreSQL 16<br/>constraints back up every rule")]
   login["Managed login (later, not built)"]
@@ -28,8 +29,8 @@ flowchart LR
   ios -.-> identity
   android -.-> identity
   identity --> policy
-  policy --> events & registrations & users
-  events & registrations & users -- "SQL transactions" --> db
+  policy --> events & registrations & users & supply
+  events & registrations & users & supply -- "SQL transactions" --> db
   login -. "tokens (JWKS)" .-> identity
   registrations -. "outbox (later)" .-> notify
 ```
@@ -54,11 +55,15 @@ erDiagram
   USERS ||--o{ EVENTS : organizes
   USERS ||--o{ REGISTRATIONS : "registers (as attendee)"
   EVENTS ||--o{ REGISTRATIONS : has
+  USERS ||--o{ DELIVERY_SLOTS : "supplies"
+  DELIVERY_SLOTS ||--o{ ORDERS : books
+  USERS ||--o{ ORDERS : "orders (as contractor)"
+  USERS |o--o{ ORDERS : "delivers (as driver)"
   USERS {
     uuid id PK
     text email "unique, any case"
     text name
-    text_array roles "organizer, attendee, admin; at least one"
+    text_array roles "organizer, attendee, admin, supplier, contractor, driver"
   }
   EVENTS {
     uuid id PK
@@ -76,12 +81,31 @@ erDiagram
     text status "active or cancelled"
     timestamptz cancelled_at "set exactly when cancelled"
   }
+  DELIVERY_SLOTS {
+    uuid id PK
+    uuid supplier_id FK
+    text title
+    text area
+    timestamptz starts_at
+    int capacity "deliveries in the window"
+    int booked_count "0 to capacity"
+  }
+  ORDERS {
+    uuid id PK "chosen by the client"
+    uuid slot_id FK
+    uuid contractor_id FK
+    uuid driver_id FK "set when claimed"
+    text items
+    text jobsite
+    text status "booked, claimed, delivered, cancelled"
+  }
 ```
 
 - **One active registration per person per event** is a partial unique index (`WHERE status = 'active'`). A cancelled row stays as history, so the same person can register again.
-- **Registrations are never deleted.** A trigger rejects `DELETE`, and the foreign keys use `ON DELETE RESTRICT`. The seat count can only change through the registration service. The one exception is the demo reset and the test setup, which empty all three tables in one `TRUNCATE`, so counts and rows reach zero together.
+- **Registrations are never deleted.** A trigger rejects `DELETE`, and the foreign keys use `ON DELETE RESTRICT`. The seat count can only change through the registration service. The one exception is the demo reset and the test setup, which empty all tables in one `TRUNCATE`, so counts and rows reach zero together.
 - **`registered_count`** is stored on the event, with `CHECK (registered_count BETWEEN 0 AND capacity)`. Section 5 explains why a counter and not `COUNT(*)`.
 - A person can hold several roles; an organizer who also attends has both.
+- **Orders follow the same rules as registrations:** never deleted, `booked_count` kept by the supply service with a `CHECK` behind it, and a driver set exactly when the order is claimed or delivered (section 11).
 
 ## 4. How the user types access the system
 
@@ -97,6 +121,8 @@ The brief: *"Describe how you would enforce role-based authorization, but implem
 | See who registered (`event:list-registrations`) | no | yes | no | yes |
 | Register or cancel for oneself (`registration:self`) | yes | no | no | no |
 | See their own registrations (`registration:list-own`) | yes | no | no | no |
+| See delivery slots (`slot:read`) | yes | yes | yes | yes |
+| Supply roles (`slot:create`, `slot:list-orders`, `order:own`, `job:work`) | see section 11 | | | |
 | See all users with emails (`user:list`) | no | no | no | yes |
 | **Designed, not built:** remove an attendee (`registration:remove`) | no | yes | no | yes |
 | **Designed, not built:** suspend a user (`user:suspend`) | no | no | no | yes |
@@ -202,3 +228,22 @@ The live demo is for reviewing, not for production:
 - **Stable errors.** Apps branch on `code` (`EVENT_FULL`, `EVENT_STARTED`...), never on message text.
 - **Old app versions.** Responses may gain fields and clients ignore unknown ones (SPEC section 6); removing or renaming a field needs `/v2`. Request bodies reject unknown fields, so a typo in an app fails loudly in testing.
 - **Time zones.** Times are UTC on the wire with the event's IANA zone, so each app shows the event's local time correctly anywhere.
+
+## 11. Jobsite supply
+
+The brief's hard part, a limited capacity under a rush, is also the hard part of construction supply. A second flow on the same API shows it, with the same structure: one module (`src/modules/supply`), one SQL transaction per write, a `CHECK` behind each guard, deny-by-default `can()`, and rules S1-S8 with tests named after them (SPEC section 14).
+
+| Who | Can do | `can()` action |
+|---|---|---|
+| Supplier | Publish delivery slots: a time window with a fixed number of deliveries (one per truck) | `slot:create` |
+| Supplier (owner), admin | See a slot's orders: contractor names, items, jobsites, never emails | `slot:list-orders` |
+| Contractor | Order material to a jobsite in a slot, cancel it until a driver takes it, see their own orders | `order:own` |
+| Driver | See open jobs, take one, mark it delivered | `job:work` |
+
+- **The capacity (S1)** is the event pattern again: `UPDATE delivery_slots SET booked_count = booked_count + 1 WHERE booked_count < capacity`, so a truck is never promised to more jobsites than it can reach.
+- **One driver per job (S4)** is one conditional `UPDATE orders SET driver_id = me WHERE status = 'booked' AND driver_id IS NULL`. Ten drivers tapping "Take this job" at once: one gets 200, nine get `409 JOB_TAKEN`. A cancel and a claim at the same moment both re-check `status = 'booked'` after the row lock, so only one of them goes through. The proof page runs this live.
+- **Safe retries for phones on a jobsite (S2):** the app makes the order id itself and sends `PUT /v1/slots/{id}/orders/{orderId}`. A resend after a dropped connection returns the same order instead of booking a second truck.
+- **Privacy (S7):** drivers see the items, the jobsite and the slot, never the contractor; suppliers see names on their own slots only.
+
+**Later:** a real catalog per supplier instead of free-text items, prices and payment, live driver location (the reason to move the API into containers, section 9), photos at delivery, and organizations, so a contractor's whole company sees its orders. Each fits the same pattern: a new rule in the SPEC, a test named after it, then the smallest change.
+

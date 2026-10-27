@@ -1,7 +1,7 @@
 # community-events: guide for coding agents
 
 Event registration platform: a Fastify + PostgreSQL REST API, plus a React web client in `web/`.
-Business rules (R1-R10, W1-W5) and the API contract live in `docs/SPEC.md`. Read it before changing behavior.
+Business rules (R1-R10, the supply flow's S1-S8, W1-W6) and the API contract live in `docs/SPEC.md`. Read it before changing behavior.
 
 ## Commands
 
@@ -58,8 +58,9 @@ web/                     React client; has its own CLAUDE.md
 
 - **R1 seat limit lives in SQL:** `UPDATE events ... WHERE registered_count < capacity`, backed by `CHECK (registered_count BETWEEN 0 AND capacity)`. Never count rows and then insert.
 - `registered_count` changes only in the registrations module (`src/modules/registrations/`), inside a transaction that its service opens. Cancel lowers it only when a registration row actually changed (R3).
-- Registrations are never deleted. Their foreign keys use `ON DELETE RESTRICT`, so no delete can change the seat count behind the registration service. Only the demo reset and the test setup empty tables, all three in one `TRUNCATE`; never empty one alone.
-- Lock order in every transaction: the registration row first, then the event row.
+- Registrations are never deleted. Their foreign keys use `ON DELETE RESTRICT`, so no delete can change the seat count behind the registration service. The same holds for orders (SPEC section 14). Only the demo reset and the test setup empty tables, all of them in one `TRUNCATE`; never empty one alone.
+- The same for the jobsite supply flow (SPEC section 14): `delivery_slots.booked_count` changes only in `src/modules/supply/`, inside the service's transactions, guarded by `booked_count < capacity` and its `CHECK`; a delivery job is taken by one conditional `UPDATE ... WHERE driver_id IS NULL`.
+- Lock order in every transaction: the registration (or order) row first, then the event (or slot) row.
 - Every `/v1` route except `/v1/health` goes through `can()`. The acting user comes from the identity header, never from the body.
 - Errors use the problem+json shape and the codes in SPEC section 7.
 - `web/` holds no business rules (W1).

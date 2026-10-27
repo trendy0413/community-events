@@ -1,6 +1,6 @@
 # Community Events
 
-A REST API for community events: organizers create events with a capacity, attendees register and cancel, and the capacity holds even when many people register at the same moment. A web client and a "Try to overbook it" page sit on top of it.
+A REST API for community events: organizers create events with a capacity, attendees register and cancel, and the capacity holds even when many people register at the same moment. The same API also runs a jobsite supply flow: suppliers publish delivery slots, contractors order material to a jobsite, and exactly one driver takes each delivery job. A web client and a "Try to overbook it" page sit on top of it.
 
 **Live demo** (fake data, nothing to install, reset every night): [community-events-web.vercel.app](https://community-events-web.vercel.app) · [Try to overbook it](https://community-events-web.vercel.app/proof) · [API docs](https://community-events-web.vercel.app/docs)
 
@@ -9,7 +9,8 @@ A REST API for community events: organizers create events with a capacity, atten
 - **The seat limit is enforced by the database.** One conditional `UPDATE ... WHERE registered_count < capacity` plus a `CHECK` constraint ([the SQL](src/modules/registrations/repository.ts)). [The race tests](test/integration/registrations.test.ts) send 50 parallel registrations for 10 seats on real PostgreSQL, with a pool of 60 connections so the calls really overlap; [the lock-wait tests](test/integration/lock-wait.test.ts) show the second booking waiting for the first.
 - **Retry-safe register and cancel.** A phone that resends on a weak network never books twice and never gets an error for a booking that worked: `PUT` and `DELETE` on `/v1/events/{id}/registrations/me` (R2, R3 tests in the same file, and [the dropped-connection tests](test/integration/registrations-retry.test.ts)).
 - **One deny-by-default permission check.** Every `/v1` route except `/v1/health` calls `can()` ([src/auth/policy.ts](src/auth/policy.ts)); [a test](test/unit/policy.test.ts) checks every cell of the role-by-action table.
-- **Every rule has a test, and the tests are tested.** CI fails if a SPEC rule has no test named after it, and [7 deliberate breaks](mutants/mutants.json) must each fail a test.
+- **Every rule has a test, and the tests are tested.** CI fails if a SPEC rule has no test named after it, and [11 deliberate breaks](mutants/mutants.json) must each fail a test.
+- **One driver per delivery job.** Ten drivers taking one job at once: exactly one gets it ([the supply tests](test/integration/supply.test.ts), [the SQL](src/modules/supply/repository.ts)). Slots never book more deliveries than they have, and a phone can resend an order safely.
 - **No personal data can enter the demo.** No sign-up; only seeded `@example.com` people; the reset refuses a database with anyone else.
 
 ## Instructions for running the application
@@ -54,7 +55,7 @@ The integration tests use their own database (`<your database>_test`, created on
 | PostgreSQL 16, Kysely, plain SQL migrations | Transactions and constraints enforce the seat rule; the SQL that matters stays visible. |
 | A counter with a conditional `UPDATE` | Exactly one request gets the last seat, with one short row lock and no retries ([SPEC section 8](docs/SPEC.md#8-how-the-last-seat-stays-safe)). |
 | OpenAPI generated from the route schemas | Typed clients for web now, Swift and Kotlin later; CI fails if the contract drifts. |
-| Spec first | [docs/SPEC.md](docs/SPEC.md) holds rules R1-R10 and W1-W5; test names start with the rule ID. |
+| Spec first | [docs/SPEC.md](docs/SPEC.md) holds rules R1-R10, S1-S8 (jobsite supply) and W1-W6; test names start with the rule ID. |
 
 More, with diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -111,7 +112,7 @@ From git timestamps (planning and the first spec draft before the first commit a
 
 | File | What it holds |
 |---|---|
-| [docs/SPEC.md](docs/SPEC.md) | Rules R1-R10 and W1-W5 with their tests, permissions, API, errors, how the last seat stays safe |
+| [docs/SPEC.md](docs/SPEC.md) | Rules R1-R10, S1-S8 and W1-W6 with their tests, permissions, API, errors, how the last seat stays safe |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Diagrams, entities, access by role, stack, MVP vs later, production plan |
 | [src/modules/registrations/repository.ts](src/modules/registrations/repository.ts) | The SQL that keeps the last seat safe |
 | [test/integration/](test/integration) | Race, lock-wait, workflow, permission and privacy tests on real PostgreSQL |
