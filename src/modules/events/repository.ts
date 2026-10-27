@@ -89,7 +89,7 @@ export async function listEventViews(db: Db, viewerId: string, filter: EventList
 /** Who owns the event, for permission checks. */
 export async function findEventOwner(db: Db, eventId: string): Promise<OwnedResource | null> {
   const row = await db.selectFrom('events').select('organizer_id').where('id', '=', eventId).executeTakeFirst();
-  return row ? { organizerId: row.organizer_id } : null;
+  return row ? { ownerId: row.organizer_id } : null;
 }
 
 /**

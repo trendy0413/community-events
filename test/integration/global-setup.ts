@@ -104,6 +104,6 @@ export default async function setup(project: TestProject): Promise<void> {
   await migrate(url);
   // Start every run from empty tables. TRUNCATE does not fire the
   // no-delete trigger on registrations.
-  await withClient(url, (client) => client.query('TRUNCATE registrations, events, users'));
+  await withClient(url, (client) => client.query('TRUNCATE orders, delivery_slots, registrations, events, users'));
   project.provide('databaseUrl', url);
 }

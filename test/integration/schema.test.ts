@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { afterAll, describe, expect, it } from 'vitest';
+import { insertSlot } from '../../src/modules/supply/repository.js';
 import { createEvent, createUser, testDb } from './helpers.js';
 
 const db = testDb();
@@ -140,5 +142,74 @@ describe('schema', () => {
     await expect(
       sql`INSERT INTO users (email, name, roles) VALUES ('y-role@example.com', 'Y', ARRAY[]::text[])`.execute(db),
     ).rejects.toMatchObject(violation);
+  });
+});
+
+// SPEC section 14: the same backstops for the supply flow.
+describe('supply schema', () => {
+  async function slotWithOrder(capacity = 2) {
+    const supplier = await createUser(db, ['supplier']);
+    const contractor = await createUser(db, ['contractor']);
+    const slot = await insertSlot(db, supplier, {
+      title: 'Morning run',
+      area: 'Downtown',
+      startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+      timezone: 'UTC',
+      capacity,
+    });
+    const id = randomUUID();
+    await db.insertInto('orders').values({ id, slot_id: slot, contractor_id: contractor, items: 'nails', jobsite: 'site' }).execute();
+    return { slot, id };
+  }
+
+  it('never books more deliveries than a slot has (booked_count CHECK)', async () => {
+    const { slot } = await slotWithOrder(2);
+    const violation = { code: CHECK_VIOLATION, constraint: 'delivery_slots_booked_within_capacity' };
+
+    await expect(db.updateTable('delivery_slots').set({ booked_count: 3 }).where('id', '=', slot).execute()).rejects.toMatchObject(
+      violation,
+    );
+    await expect(db.updateTable('delivery_slots').set({ booked_count: -1 }).where('id', '=', slot).execute()).rejects.toMatchObject(
+      violation,
+    );
+  });
+
+  it('gives a job a driver exactly when it is claimed or delivered', async () => {
+    const { id } = await slotWithOrder();
+    const driver = await createUser(db, ['driver']);
+
+    await expect(
+      db.updateTable('orders').set({ status: 'claimed', claimed_at: new Date() }).where('id', '=', id).execute(),
+    ).rejects.toMatchObject({ code: CHECK_VIOLATION, constraint: 'orders_driver_matches_status' });
+    await expect(db.updateTable('orders').set({ driver_id: driver }).where('id', '=', id).execute()).rejects.toMatchObject({
+      code: CHECK_VIOLATION,
+      constraint: 'orders_driver_matches_status',
+    });
+  });
+
+  it('rejects a slot capacity of zero, an unknown order status and a status without its time', async () => {
+    const { slot, id } = await slotWithOrder();
+
+    await expect(db.updateTable('delivery_slots').set({ capacity: 0 }).where('id', '=', slot).execute()).rejects.toMatchObject({
+      code: CHECK_VIOLATION,
+      constraint: 'delivery_slots_capacity_positive',
+    });
+    await expect(sql`UPDATE orders SET status = 'lost' WHERE id = ${id}`.execute(db)).rejects.toMatchObject({
+      code: CHECK_VIOLATION,
+      constraint: 'orders_status_valid',
+    });
+    await expect(db.updateTable('orders').set({ status: 'cancelled' }).where('id', '=', id).execute()).rejects.toMatchObject({
+      code: CHECK_VIOLATION,
+      constraint: 'orders_cancelled_at_matches_status',
+    });
+    const driver = await createUser(db, ['driver']);
+    await expect(
+      db.updateTable('orders').set({ status: 'delivered', driver_id: driver, claimed_at: new Date() }).where('id', '=', id).execute(),
+    ).rejects.toMatchObject({ code: CHECK_VIOLATION, constraint: 'orders_delivered_at_matches_status' });
+  });
+
+  it('never deletes an order', async () => {
+    const { id } = await slotWithOrder();
+    await expect(db.deleteFrom('orders').where('id', '=', id).execute()).rejects.toMatchObject({ code: RESTRICT_VIOLATION });
   });
 });

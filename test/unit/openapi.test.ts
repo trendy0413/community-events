@@ -38,12 +38,21 @@ describe('OpenAPI contract', () => {
       'AttendeeList',
       'ChangeCapacityInput',
       'CreateEventInput',
+      'CreateSlotInput',
       'Event',
       'EventList',
       'Health',
+      'Job',
+      'JobBoard',
+      'MyOrders',
       'MyRegistrations',
+      'Order',
+      'PlaceOrderInput',
       'Problem',
       'Registration',
+      'Slot',
+      'SlotList',
+      'SlotOrders',
       'User',
     ]);
     // Error responses point at the one Problem component instead of each holding a copy.
@@ -84,6 +93,8 @@ describe('finishContract', () => {
           },
         },
       },
+      // Every response that gets a declared header must exist.
+      '/v1/slots': { post: { responses: { '201': { description: 'Created' } } } },
     },
     components: { schemas },
   });

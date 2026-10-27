@@ -12,8 +12,8 @@ const url = process.env.DATABASE_URL_UNPOOLED ?? loadConfig().databaseUrl;
 await migrate(url);
 const db = createDb(url);
 try {
-  const { people, events, registrations } = await resetDemo(db);
-  console.log(`Demo reset: ${people} people, ${events} events, ${registrations} seats taken.`);
+  const { people, events, registrations, slots, orders } = await resetDemo(db);
+  console.log(`Demo reset: ${people} people, ${events} events, ${registrations} seats taken, ${slots} delivery slots, ${orders} orders.`);
 } finally {
   await db.destroy();
 }

@@ -3,7 +3,8 @@
 // for example "R1 rejects registration when the event is full" or
 // "R1 R3 mixed registers and cancels keep the count equal to the active rows".
 
-const ID = String.raw`[RW]\d+`;
+// R: the brief's rules, S: the supply flow (SPEC section 14), W: the web client.
+const ID = String.raw`[RSW]\d+`;
 const RULE_ROW = new RegExp(String.raw`^\|\s*(${ID})\s*\|`);
 const CITED_IDS = new RegExp(String.raw`^((?:${ID}\s+)+)`);
 // it(...) or test(...), but not someObject.test(...). Titles may contain
@@ -53,9 +54,9 @@ export function parseSpecRules(spec: string): SpecRule[] {
 export function specProblems(rules: SpecRule[]): string[] {
   const problems: string[] = [];
   for (const rule of rules) {
-    // Backend rules (R) are always tested. Web rules (W) may be checked by
-    // review or lint instead, as their "How checked" column says.
-    if (rule.id.startsWith('R') && rule.expectedTests.length === 0) {
+    // Backend rules (R and S) are always tested. Web rules (W) may be checked
+    // by review or lint instead, as their "How checked" column says.
+    if (!rule.id.startsWith('W') && rule.expectedTests.length === 0) {
       problems.push(`${rule.id} lists no test in docs/SPEC.md`);
     }
     for (const title of rule.expectedTests) {

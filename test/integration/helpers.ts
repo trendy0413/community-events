@@ -95,7 +95,12 @@ export function v1Operations(app: App): string[] {
   return operations.sort();
 }
 
-/** The operation a test request calls, in the v1Operations form. */
-export function operationOf(method: string, url: string, eventId: string): string {
-  return `${method} ${(url.split('?')[0] ?? url).replaceAll(eventId, '{id}')}`;
+/**
+ * The operation a test request calls, in the v1Operations form. `id` is
+ * replaced by {id}; `params` names other path values, as { [orderId]: 'orderId' }.
+ */
+export function operationOf(method: string, url: string, id: string, params: Record<string, string> = {}): string {
+  let path = url.split('?')[0] ?? url;
+  for (const [value, name] of Object.entries(params)) path = path.replaceAll(value, `{${name}}`);
+  return `${method} ${path.replaceAll(id, '{id}')}`;
 }

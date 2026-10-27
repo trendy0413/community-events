@@ -91,6 +91,7 @@ export async function buildApp(options: AppOptions) {
         { name: 'events', description: 'Events, their seat counts and their capacity' },
         { name: 'registrations', description: 'Register and cancel. Both are safe to retry.' },
         { name: 'users', description: 'The signed-in user, and every user for admins' },
+        { name: 'supply', description: 'Jobsite supply: delivery slots, orders and delivery jobs (SPEC section 14)' },
         { name: 'health', description: 'Is the API up, and can it reach the database? No identity needed.' },
       ],
     },

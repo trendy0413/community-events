@@ -72,9 +72,9 @@ Rows outside R5 and R6 have no rule ID of their own. `test/unit/policy.test.ts` 
 Data-model constraints have no rule ID of their own: they back up the rules in the database. `test/integration/schema.test.ts` covers each one.
 
 **users**
-- `id` uuid, `email`, `name`, `roles` (a set of `organizer`, `attendee`, `admin`), `created_at`
+- `id` uuid, `email`, `name`, `roles` (a set of `organizer`, `attendee`, `admin`, and the supply roles `supplier`, `contractor`, `driver` of section 14), `created_at`
 - Emails are unique, ignoring upper and lower case.
-- `roles` holds at least one role, and only these three.
+- `roles` holds at least one role, and only these six.
 
 **events**
 - `id` uuid, `organizer_id` → users, `title`, `description` (optional)
@@ -88,7 +88,7 @@ Data-model constraints have no rule ID of their own: they back up the rules in t
 - `status` (`active` or `cancelled`), `created_at`, `cancelled_at`
 - `cancelled_at` is set exactly when `status` is `cancelled`.
 - Partial unique index on `(event_id, attendee_id) WHERE status = 'active'`. A plain unique index would block registering again after a cancel.
-- Rows are never deleted. A cancelled row stays as history. Registering again creates a new row. A database trigger rejects any `DELETE` on registrations. The one exception is the demo reset (W5) and the test setup: they empty all three tables in one `TRUNCATE`, so counts and rows reach zero together. One table is never emptied alone.
+- Rows are never deleted. A cancelled row stays as history. Registering again creates a new row. A database trigger rejects any `DELETE` on registrations. The one exception is the demo reset (W5) and the test setup: they empty all tables in one `TRUNCATE`, so counts and rows reach zero together. One table is never emptied alone.
 - The foreign keys from registrations to events and users use `ON DELETE RESTRICT`. The app never deletes events or users, so no delete can change the seat count behind the registration service.
 
 ## 6. API (`/v1`)
@@ -226,8 +226,8 @@ A validation error adds `errors`:
 |---|---|---|
 | `VALIDATION_FAILED` | 400 | Bad body, query or path value (for example a malformed UUID) |
 | `UNAUTHENTICATED` | 401 | Missing, malformed or unknown identity (R8) |
-| `FORBIDDEN` | 403 | The identity is known but not allowed (R5, R6, `scope=past` without the admin role, or any role that lacks the action in section 4) |
-| `NOT_FOUND` | 404 | The event or the route does not exist |
+| `FORBIDDEN` | 403 | The identity is known but not allowed (R5, R6, S5, S6, `scope=past` without the admin role, another contractor's order, or any role that lacks the action in sections 4 and 14) |
+| `NOT_FOUND` | 404 | The event, slot, order or route does not exist |
 | `EVENT_FULL` | 409 | No seats left (R1) |
 | `EVENT_STARTED` | 409 | The event has started (R4, R7) |
 | `CAPACITY_BELOW_REGISTERED` | 409 | New capacity is below the registered count (R7) |
@@ -283,9 +283,10 @@ The brief does not require a frontend. The web client is built after the backend
 |---|---|---|
 | W1 | The web client holds no business rules: no seat math, no role checks, no copied validation. It shows the server's answer in plain words. | A lint rule stops `web/` from importing anything from `src/`. The `spec-reviewer` agent checks every `web/` change. |
 | W2 | The person switcher (the menu that picks a demo person) changes who you are, never what you may do. The server decides. | The web client only sends the identity header. The permission tests (R5, R6) prove the server decides. |
-| W3 | Each run on the proof page ("Try to overbook it") creates its own event, so runs from different visitors never mix. | `W3 each proof run creates its own event` |
+| W3 | Each run on the proof page ("Try to overbook it") creates its own event, or its own delivery slot and order for the driver race, so runs from different visitors never mix. | `W3 each proof run creates its own event`, `W3 each driver race creates its own slot and order` |
 | W4 | The "No overbooking" badge shows only when three numbers equal the capacity: successful registrations, the event's `registeredCount`, and the active rows in the attendee list. This only displays numbers the server returned. It is not a business rule (W1). | `W4 badge shows only when all three counts equal the capacity` |
-| W5 | The demo holds only seeded fake people (`@example.com`). It has no sign-up. A reset script (`npm run demo:reset`) wipes and re-seeds the data, then takes each seeded event's `crowdRegistrations` seats through the registration service. It refuses a database that holds anyone outside the seed file. If taking the seats fails, run it again. | `W5 seed data holds only @example.com people`, `W5 demo reset refuses a database with people outside the seed file`, `W5 demo reset wipes the data and seeds it again` |
+| W5 | The demo holds only seeded fake people (`@example.com`). It has no sign-up. A reset script (`npm run demo:reset`) wipes and re-seeds the data, then takes each seeded event's `crowdRegistrations` seats through the registration service, and places each seeded slot's orders (and the drivers' claims) through the supply service. It refuses a database that holds anyone outside the seed file. If taking the seats or placing the orders fails, run it again. | `W5 seed data holds only @example.com people`, `W5 demo reset refuses a database with people outside the seed file`, `W5 demo reset wipes the data and seeds it again` |
+| W6 | The "Exactly one driver" badge on the proof page shows only when one claim got 200, every other claim got `409 JOB_TAKEN`, and the order read back is claimed by that same driver. Like W4, it only compares answers the server gave. | `W6 badge shows only when one driver got the job and the order read back is claimed by that driver` |
 
 ## 11. Assumptions
 
@@ -318,7 +319,7 @@ The brief does not require a frontend. The web client is built after the backend
 **Full build:**
 - R7 has a passing test.
 - The committed `openapi/openapi.json` matches the code (CI checks this).
-- W1-W5 are checked as their table in section 10 says.
+- W1-W6 are checked as their table in section 10 says.
 - On the live demo, the proof page shows "No overbooking" on two runs in a row.
 
 **End-to-end check:**
@@ -331,3 +332,94 @@ npm test
 ```
 
 Then start the API (`npm run dev`) and the web client (`npm --prefix web run dev`), open the proof page, and run "50 people, 10 seats" twice. Both runs must show exactly 10 seats taken and the "No overbooking" badge.
+
+## 14. Jobsite supply (beyond the brief)
+
+The same platform pattern, applied to construction supply: a contractor on a jobsite needs material, a local supplier delivers it, and a driver takes the delivery. It sits next to the events API and changes nothing in it. It reuses the brief's hard part twice: a limited capacity that holds under a rush (S1), and a job that exactly one driver can take (S4).
+
+**Roles** (added to the role set of section 2):
+
+| Role | Can do |
+|---|---|
+| Supplier | Publish delivery slots, see the orders in their own slots |
+| Contractor | See slots, place an order in a slot, cancel their own order, see their own orders |
+| Driver | See open delivery jobs and their own, claim a job, mark their own job delivered |
+
+Admins also see every slot's orders. One person can hold several roles.
+
+**A delivery slot** is a time window in which a supplier can make a fixed number of deliveries (`capacity`, for example one per truck). **An order** books one delivery in a slot: what to bring (`items`) and where (`jobsite`). Once booked, an order is also a **delivery job** that drivers can claim.
+
+An order moves: `booked` → `claimed` (a driver took it) → `delivered`, or `booked` → `cancelled`.
+
+### Rules
+
+| ID | Rule | Source | Who is hurt if this breaks | Test |
+|---|---|---|---|---|
+| S1 | A slot never takes more orders than its capacity, even when many contractors order at the same moment. A slot that has started takes no new orders. | supply | A truck is promised to more jobsites than it can reach; a crew waits for material that never comes. | `S1 rejects an order when the slot is full`, `S1 50 parallel orders for 5 deliveries give exactly 5`, `S1 rejects an order after the slot starts` |
+| S2 | Placing an order is safe to retry. The client names the order with its own id; sending the same order again (same contractor, slot, items and jobsite) returns it as it is now (200), even if it was cancelled since, and books nothing more. Any other use of an existing id is refused, so a changed body is never silently dropped. | supply | A phone on a jobsite with weak signal resends and books two deliveries. | `S2 sending the same order twice books it once`, `S2 10 parallel retries of one order book it once`, `S2 an order id cannot be reused for another order` |
+| S3 | A contractor can cancel their own order until a driver claims it or the slot starts. The capacity comes back at once; cancelling again changes nothing. | supply | A driver drives to a jobsite that cancelled; a cancelled order keeps a truck blocked. | `S3 cancel frees the capacity once`, `S3 cannot cancel after a driver claimed the order`, `S3 rejects cancellation after the slot starts` |
+| S4 | Exactly one driver gets each delivery job, even when many drivers claim it at the same moment, and a cancel and a claim at the same moment never both go through. The same driver claiming again keeps the job. A job can be taken until it is cancelled or delivered, also after its slot starts (a late truck still delivers); the open-jobs list shows only upcoming slots. | supply | Two drivers drive to the same jobsite, or none does because each thought the other had it. | `S4 10 drivers claiming one job at once: exactly one gets it`, `S4 the same driver claiming twice keeps the job`, `S4 a cancelled order cannot be claimed`, `S3 S4 a parallel cancel and claim: exactly one wins` |
+| S5 | Only the driver who claimed a job can mark it delivered. Marking it again changes nothing. | supply | A delivery shows as done when nobody delivered it. | `S5 only the claiming driver can mark a job delivered` |
+| S6 | Only suppliers publish slots, only contractors order, only drivers claim. A supplier sees orders only in their own slots. | supply | One supplier reads another supplier's customers and jobsites. | `S6 a contractor cannot publish a slot`, `S6 a supplier cannot see another supplier's orders`, `S6 only contractors can place an order`, `S6 only drivers can claim a job` |
+| S7 | Privacy: no supply endpoint shows another user's email to a non-admin. A contractor sees only their own orders. Drivers see a job's items, jobsite and slot, never the contractor. | supply | Contact details of contractors leak to every driver and supplier. | `S7 no supply endpoint shows another user's email to a contractor, driver or supplier` |
+| S8 | Input limits: slot title 3-80 characters, area 2-80, capacity 1-50, start in the future and less than 1 year away, a valid IANA time zone; order items 3-500, jobsite 3-200; no NUL characters; unknown fields rejected. | supply (exact limits added) | Bad or huge input breaks pages or fills the database. | `S8 rejects invalid slot input`, `S8 rejects invalid order input` |
+
+`supply` = the construction-supply use case this section adds.
+
+### Permissions
+
+| Action | Contractor | Supplier (owner) | Supplier (other) | Driver | Admin |
+|---|---|---|---|---|---|
+| See slots | yes | yes | yes | yes | yes |
+| Publish a slot | no | yes | yes | no | no |
+| See a slot's orders | no | yes | no | no | yes |
+| Place, cancel and list their own orders | yes | no | no | no | no |
+| See jobs, claim a job, mark their own job delivered | no | no | no | yes | no |
+
+`test/unit/policy.test.ts` checks every cell, as for section 4.
+
+### Data model
+
+- **delivery_slots:** `id`, `supplier_id` → users, `title`, `area`, `starts_at`, `timezone`, `capacity` (1 or more), `booked_count` (0 to capacity, `CHECK`), `created_at`.
+- **orders:** `id` (chosen by the client, S2), `slot_id` → delivery_slots, `contractor_id` → users, `items`, `jobsite`, `status`, `driver_id` → users (set exactly when `claimed` or `delivered`), `created_at`, `claimed_at`, `delivered_at`, `cancelled_at` (each set exactly when the order reached that status).
+- Orders are never deleted (a trigger rejects `DELETE`; foreign keys use `ON DELETE RESTRICT`), as for registrations. `booked_count` equals the number of orders in the slot that are not cancelled.
+
+### API
+
+| Method | Path | Who | Success |
+|---|---|---|---|
+| GET | `/v1/slots` | any user | 200 upcoming slots, soonest first. Query: `supplier=me`, `limit` 1-50 (default 20) |
+| POST | `/v1/slots` | supplier | 201 the slot, with a `Location` header. Body: `{title, area, startsAt, timezone, capacity}` |
+| GET | `/v1/slots/{id}` | any user | 200 the slot |
+| GET | `/v1/slots/{id}/orders` | the slot's supplier, admin | 200 the slot's orders: contractor name, items, jobsite, status, driver name |
+| PUT | `/v1/slots/{id}/orders/{orderId}` | contractor | 201 a new order, or 200 the same order again. Body: `{items, jobsite}`. 404 if the slot does not exist. Safe to retry. |
+| DELETE | `/v1/orders/{orderId}` | the order's contractor | 204, also when already cancelled. 403 for another contractor's order, 404 if it does not exist. Safe to retry. |
+| GET | `/v1/me/orders` | contractor | 200 my orders, newest first. Query: `limit` 1-50 (default 20) |
+| GET | `/v1/jobs` | driver | 200 `{open, mine}`: jobs nobody has claimed in upcoming slots, and my claimed and delivered jobs; at most 50 in each list |
+| PUT | `/v1/jobs/{orderId}/driver` | driver | 200 the job, now mine; also when it was already mine. Safe to retry. |
+| PUT | `/v1/jobs/{orderId}/delivered` | the job's driver | 200 the job, delivered; also when it was already delivered. Safe to retry. |
+
+A slot answers `{id, title, area, startsAt, timezone, capacity, bookedCount, deliveriesLeft, supplier: {id, name}}`. `deliveriesLeft` is `capacity - bookedCount`, computed by the server.
+
+### Errors
+
+Added to the codes of section 7:
+
+| Code | Status | When |
+|---|---|---|
+| `SLOT_FULL` | 409 | The slot has no deliveries left (S1) |
+| `SLOT_STARTED` | 409 | The slot has started: no new orders and no cancellations (S3) |
+| `ORDER_ID_IN_USE` | 409 | The order id belongs to another contractor's or another slot's order (S2) |
+| `ORDER_CLAIMED` | 409 | A driver has claimed the order, so it can no longer be cancelled (S3) |
+| `JOB_TAKEN` | 409 | Another driver has claimed the job (S4) |
+| `JOB_NOT_OPEN` | 409 | The order is cancelled or delivered, so it cannot be claimed (S4) |
+
+### How the capacity and the job stay safe
+
+The same mechanisms as section 8:
+
+- **Order** (one transaction): `INSERT ... ON CONFLICT (id) DO NOTHING RETURNING`, then `UPDATE delivery_slots SET booked_count = booked_count + 1 WHERE id = $1 AND booked_count < capacity AND starts_at > clock_timestamp()`. If the insert returned nothing, the order exists: return it when it is the same contractor's order in the same slot (200), otherwise `ORDER_ID_IN_USE`. If the update matches no row, roll back and answer `SLOT_FULL` or `SLOT_STARTED`.
+- **Cancel** (one transaction): `UPDATE orders SET status = 'cancelled' ... WHERE id = $1 AND contractor_id = $2 AND status = 'booked'`, then, only if a row changed, `booked_count - 1` on the slot, guarded by the slot's start. Lock order is the order row, then the slot row, as for registrations.
+- **Claim:** one `UPDATE orders SET status = 'claimed', driver_id = $2 ... WHERE id = $1 AND status = 'booked' AND driver_id IS NULL`. Under READ COMMITTED a second claim waits for the first, re-checks its `WHERE`, and matches nothing. Then read the order: mine means 200 (a retry), another driver's means `JOB_TAKEN`, cancelled or delivered means `JOB_NOT_OPEN`.
+- **Deliver:** one `UPDATE ... SET status = 'delivered' WHERE id = $1 AND driver_id = $2 AND status = 'claimed'`; if nothing matched, read the order to tell a retry (already delivered, 200) from someone else's job (`FORBIDDEN`).
+- `CHECK` constraints back up each step: `booked_count` between 0 and capacity, and `driver_id` set exactly when the status is `claimed` or `delivered`.

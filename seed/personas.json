@@ -29,6 +29,30 @@
       "name": "Ada Brooks",
       "email": "ada@example.com",
       "roles": ["admin"]
+    },
+    {
+      "id": "0d3c2f6e-1a1b-4c00-8a01-000000000008",
+      "name": "Sam Rivera",
+      "email": "sam@example.com",
+      "roles": ["supplier"]
+    },
+    {
+      "id": "0d3c2f6e-1a1b-4c00-8a01-000000000009",
+      "name": "Carla Nguyen",
+      "email": "carla@example.com",
+      "roles": ["contractor"]
+    },
+    {
+      "id": "0d3c2f6e-1a1b-4c00-8a01-000000000010",
+      "name": "Dev Patel",
+      "email": "dev@example.com",
+      "roles": ["driver"]
+    },
+    {
+      "id": "0d3c2f6e-1a1b-4c00-8a01-000000000011",
+      "name": "Dana Lee",
+      "email": "dana@example.com",
+      "roles": ["driver"]
     }
   ],
   "proofOrganizer": {
@@ -128,6 +152,88 @@
       "timezone": "America/Chicago",
       "capacity": 25,
       "crowdRegistrations": 12
+    }
+  ],
+  "supplyProof": {
+    "supplier": {
+      "id": "0d3c2f6e-1a1b-4c00-8a04-000000000001",
+      "name": "Proof supplier",
+      "email": "proof-supplier@example.com",
+      "roles": ["supplier"]
+    },
+    "contractor": {
+      "id": "0d3c2f6e-1a1b-4c00-8a04-000000000002",
+      "name": "Proof contractor",
+      "email": "proof-contractor@example.com",
+      "roles": ["contractor"]
+    },
+    "drivers": [
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000001", "name": "Driver 01", "email": "driver01@example.com", "roles": ["driver"]},
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000002", "name": "Driver 02", "email": "driver02@example.com", "roles": ["driver"]},
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000003", "name": "Driver 03", "email": "driver03@example.com", "roles": ["driver"]},
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000004", "name": "Driver 04", "email": "driver04@example.com", "roles": ["driver"]},
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000005", "name": "Driver 05", "email": "driver05@example.com", "roles": ["driver"]},
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000006", "name": "Driver 06", "email": "driver06@example.com", "roles": ["driver"]},
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000007", "name": "Driver 07", "email": "driver07@example.com", "roles": ["driver"]},
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000008", "name": "Driver 08", "email": "driver08@example.com", "roles": ["driver"]},
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000009", "name": "Driver 09", "email": "driver09@example.com", "roles": ["driver"]},
+      {"id": "0d3c2f6e-1a1b-4c00-8a05-000000000010", "name": "Driver 10", "email": "driver10@example.com", "roles": ["driver"]}
+    ]
+  },
+  "slots": [
+    {
+      "id": "7a1c0e2a-7b3d-4e00-9b03-000000000001",
+      "supplierId": "0d3c2f6e-1a1b-4c00-8a01-000000000008",
+      "title": "Lumber and drywall, morning run",
+      "area": "Downtown and Riverside",
+      "startsInDays": 1,
+      "localTime": "07:00",
+      "timezone": "America/Chicago",
+      "capacity": 4,
+      "orders": [
+        {
+          "id": "8b2d1f3a-7b3d-4e00-9b04-000000000001",
+          "contractorId": "0d3c2f6e-1a1b-4c00-8a01-000000000009",
+          "items": "30 2x4 studs, 12 sheets of 1/2\" drywall",
+          "jobsite": "Riverside Lofts, 220 W Lake St, gate B",
+          "driverId": "0d3c2f6e-1a1b-4c00-8a01-000000000010"
+        },
+        {
+          "id": "8b2d1f3a-7b3d-4e00-9b04-000000000002",
+          "contractorId": "0d3c2f6e-1a1b-4c00-8a01-000000000009",
+          "items": "4 boxes of drywall screws, 2 buckets of joint compound",
+          "jobsite": "Riverside Lofts, 220 W Lake St, gate B"
+        }
+      ]
+    },
+    {
+      "id": "7a1c0e2a-7b3d-4e00-9b03-000000000002",
+      "supplierId": "0d3c2f6e-1a1b-4c00-8a01-000000000008",
+      "title": "Concrete and rebar, afternoon run",
+      "area": "North side",
+      "startsInDays": 2,
+      "localTime": "13:00",
+      "timezone": "America/Chicago",
+      "capacity": 2,
+      "orders": [
+        {
+          "id": "8b2d1f3a-7b3d-4e00-9b04-000000000003",
+          "contractorId": "0d3c2f6e-1a1b-4c00-8a01-000000000009",
+          "items": "40 bags of concrete mix, 20 lengths of #4 rebar",
+          "jobsite": "Northgate clinic site, 18 Elm Ave, back lot"
+        }
+      ]
+    },
+    {
+      "id": "7a1c0e2a-7b3d-4e00-9b03-000000000003",
+      "supplierId": "0d3c2f6e-1a1b-4c00-8a01-000000000008",
+      "title": "Roofing supplies, next week",
+      "area": "West end",
+      "startsInDays": 6,
+      "localTime": "08:00",
+      "timezone": "America/Chicago",
+      "capacity": 3,
+      "orders": []
     }
   ]
 }

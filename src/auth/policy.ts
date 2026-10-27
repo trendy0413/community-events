@@ -1,10 +1,10 @@
 import type { Role } from '../db/schema.js';
 import { DomainError } from '../http/errors.js';
 
-// Who may do what (SPEC section 4). Every /v1 route except /v1/health calls
-// authorize() with one of these actions before it reads or changes anything
-// the actor may not see. Owner checks first read the event's owner from the
-// database, never from the request.
+// Who may do what (SPEC section 4, and section 14 for the supply flow). Every
+// /v1 route except /v1/health calls authorize() with one of these actions
+// before it reads or changes anything the actor may not see. Owner checks
+// first read the owner from the database, never from the request.
 
 export interface Actor {
   id: string;
@@ -22,16 +22,22 @@ export type Action =
   | 'event:list-registrations'
   | 'registration:self'
   | 'registration:list-own'
-  | 'user:list';
+  | 'user:list'
+  | 'slot:read'
+  | 'slot:create'
+  | 'slot:list-orders'
+  | 'order:own'
+  | 'job:work';
 
-/** The event an action is about, when the answer depends on who owns it. */
+/** The event or slot an action is about, when the answer depends on who owns it. */
 export interface OwnedResource {
-  organizerId: string;
+  /** The event's organizer, or the slot's supplier. */
+  ownerId: string;
 }
 
 export function can(actor: Actor, action: Action, resource?: OwnedResource): boolean {
   const has = (role: Role) => actor.roles.includes(role);
-  const owns = resource !== undefined && resource.organizerId === actor.id;
+  const owns = resource !== undefined && resource.ownerId === actor.id;
 
   switch (action) {
     case 'me:read':
@@ -50,6 +56,16 @@ export function can(actor: Actor, action: Action, resource?: OwnedResource): boo
       return has('attendee');
     case 'user:list':
       return has('admin');
+    case 'slot:read':
+      return true;
+    case 'slot:create':
+      return has('supplier');
+    case 'slot:list-orders':
+      return has('admin') || (has('supplier') && owns);
+    case 'order:own':
+      return has('contractor');
+    case 'job:work':
+      return has('driver');
     default: {
       // An action added to the type but not to this switch is a compile
       // error here; at runtime it fails the request instead of allowing it.

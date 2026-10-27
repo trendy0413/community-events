@@ -89,6 +89,16 @@ describe('API', () => {
     { method: 'PUT', url: '/v1/events/not-a-uuid/registrations/me' },
     { method: 'DELETE', url: '/v1/events/not-a-uuid/registrations/me' },
     { method: 'GET', url: '/v1/me/registrations?limit=0' },
+    { method: 'GET', url: '/v1/slots?limit=0' },
+    { method: 'POST', url: '/v1/slots', payload: { title: 'x' } },
+    { method: 'GET', url: '/v1/slots/not-a-uuid' },
+    { method: 'GET', url: '/v1/slots/not-a-uuid/orders' },
+    { method: 'PUT', url: '/v1/slots/not-a-uuid/orders/no-order', payload: {} },
+    { method: 'DELETE', url: '/v1/orders/no-order' },
+    { method: 'GET', url: '/v1/me/orders?limit=0' },
+    { method: 'GET', url: '/v1/jobs' },
+    { method: 'PUT', url: '/v1/jobs/no-order/driver' },
+    { method: 'PUT', url: '/v1/jobs/no-order/delivered' },
   ] as const;
 
   async function expectUnauthenticated(headers: Record<string, string>): Promise<void> {
@@ -107,7 +117,7 @@ describe('API', () => {
 
     // The list must name every route the server answers, so a new route (or
     // one registered outside the identity scope by mistake) cannot skip this.
-    const covered = EVERY_ROUTE.map((route) => operationOf(route.method, route.url, 'not-a-uuid'));
+    const covered = EVERY_ROUTE.map((route) => operationOf(route.method, route.url, 'not-a-uuid', { 'no-order': 'orderId' }));
     expect(v1Operations(app).filter((operation) => operation !== 'GET /v1/health').sort()).toEqual([...covered].sort());
   });
 

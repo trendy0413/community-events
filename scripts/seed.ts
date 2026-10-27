@@ -4,8 +4,8 @@ import { seed } from '../src/db/seed.js';
 
 const db = createDb(loadConfig().databaseUrl);
 try {
-  const { people, events } = await seed(db);
-  console.log(`Seeded ${people} people and ${events} events.`);
+  const { people, events, slots } = await seed(db);
+  console.log(`Seeded ${people} people, ${events} events and ${slots} delivery slots.`);
 } finally {
   await db.destroy();
 }

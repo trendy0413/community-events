@@ -3,6 +3,7 @@ import { registerDevIdentity } from '../auth/devAuth.js';
 import type { Db } from '../db/client.js';
 import { eventRoutes } from '../modules/events/routes.js';
 import { registrationRoutes } from '../modules/registrations/routes.js';
+import { supplyRoutes } from '../modules/supply/routes.js';
 import { userRoutes } from '../modules/users/routes.js';
 
 /**
@@ -15,4 +16,5 @@ export const v1Routes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db }) =
   await app.register(eventRoutes, { db });
   await app.register(registrationRoutes, { db });
   await app.register(userRoutes, { db });
+  await app.register(supplyRoutes, { db });
 };

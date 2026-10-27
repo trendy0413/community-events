@@ -68,5 +68,45 @@
     "replace": "",
     "tests": ["test/integration/api-reads.test.ts"],
     "pattern": "R7 "
+  },
+  {
+    "id": "M8",
+    "rule": "S1",
+    "breaks": "takeDelivery no longer checks for a delivery left",
+    "file": "src/modules/supply/repository.ts",
+    "find": "    .whereRef('booked_count', '<', 'capacity')\n",
+    "replace": "",
+    "tests": ["test/integration/supply.test.ts"],
+    "pattern": "S1 "
+  },
+  {
+    "id": "M9",
+    "rule": "S4",
+    "breaks": "a claim no longer checks that nobody has the job",
+    "file": "src/modules/supply/repository.ts",
+    "find": "    .where('status', '=', 'booked')\n    .where('driver_id', 'is', null)\n",
+    "replace": "    .where('status', 'in', ['booked', 'claimed'])\n",
+    "tests": ["test/integration/supply.test.ts"],
+    "pattern": "S4 "
+  },
+  {
+    "id": "M10",
+    "rule": "S1",
+    "breaks": "an order no longer checks that the slot has not started",
+    "file": "src/modules/supply/repository.ts",
+    "find": "    .whereRef('booked_count', '<', 'capacity')\n    .where('starts_at', '>', sql<Date>`clock_timestamp()`)\n",
+    "replace": "    .whereRef('booked_count', '<', 'capacity')\n",
+    "tests": ["test/integration/supply.test.ts"],
+    "pattern": "S1 "
+  },
+  {
+    "id": "M11",
+    "rule": "S3",
+    "breaks": "a cancel no longer checks that the slot has not started",
+    "file": "src/modules/supply/repository.ts",
+    "find": "    .set((eb) => ({ booked_count: eb('booked_count', '-', 1) }))\n    .where('id', '=', slotId)\n    .where('starts_at', '>', sql<Date>`clock_timestamp()`)\n",
+    "replace": "    .set((eb) => ({ booked_count: eb('booked_count', '-', 1) }))\n    .where('id', '=', slotId)\n",
+    "tests": ["test/integration/supply.test.ts"],
+    "pattern": "S3 "
   }
 ]

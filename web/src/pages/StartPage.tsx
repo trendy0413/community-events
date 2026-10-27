@@ -1,4 +1,4 @@
-import { ArrowRight, ShieldCheck, Swords } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Swords, Truck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,9 @@ const GROUPS = [
   { role: 'organizer', title: 'Organizers' },
   { role: 'attendee', title: 'Attendees' },
   { role: 'admin', title: 'Admin' },
+  { role: 'supplier', title: 'Jobsite supply: supplier' },
+  { role: 'contractor', title: 'Jobsite supply: contractor' },
+  { role: 'driver', title: 'Jobsite supply: drivers' },
 ];
 
 export function StartPage() {
@@ -31,8 +34,9 @@ export function StartPage() {
           Community events, with a seat limit you can try to break.
         </h1>
         <p className="text-lg text-muted-foreground text-pretty">
-          Organizers create events with a capacity. Attendees register and cancel. Every button here calls the live API
-          and a real PostgreSQL database.
+          Organizers create events with a capacity. Attendees register and cancel. The same API also runs a jobsite
+          supply flow: contractors order deliveries and exactly one driver takes each job. Every button here calls the
+          live API and a real PostgreSQL database.
         </p>
       </section>
 
@@ -50,6 +54,27 @@ export function StartPage() {
           <Button asChild size="lg">
             <Link to="/proof">
               Open the proof page <ArrowRight aria-hidden="true" />
+            </Link>
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <Truck className="size-5 text-primary" aria-hidden="true" />
+            Jobsite supply
+          </CardTitle>
+          <CardDescription className="text-base">
+            A supplier publishes delivery slots, a contractor orders material to a jobsite, and drivers take the
+            delivery jobs. The same rules hold: a slot never takes more orders than it has deliveries, and one job goes
+            to exactly one driver.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button asChild variant="outline" size="lg">
+            <Link to="/supply">
+              Open jobsite supply <ArrowRight aria-hidden="true" />
             </Link>
           </Button>
         </CardFooter>

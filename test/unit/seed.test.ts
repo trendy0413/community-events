@@ -27,6 +27,20 @@ describe('seed data', () => {
     for (const event of data.events) expect(organizers.has(event.organizerId)).toBe(true);
   });
 
+  it('gives every slot a supplier, and every order a contractor and, when taken, a driver', () => {
+    const data = loadSeedData();
+    const rolesOf = new Map(seedPeople(data).map((p) => [p.id, p.roles]));
+
+    for (const slot of data.slots) {
+      expect(rolesOf.get(slot.supplierId)).toContain('supplier');
+      for (const order of slot.orders) {
+        expect(rolesOf.get(order.contractorId)).toContain('contractor');
+        if (order.driverId) expect(rolesOf.get(order.driverId)).toContain('driver');
+      }
+    }
+    expect(data.supplyProof.drivers.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('gives proof runs two organizers and a crowd of 50 who can only attend', () => {
     const { proofOrganizer, otherProofOrganizer, crowd } = loadSeedData();
 

@@ -27,6 +27,10 @@ const GUIDE: Record<string, Pick<Persona, 'tryThis' | 'startAt'>> = {
   'ana@example.com': { tryThis: 'Registers for events and cancels.', startAt: '/events' },
   'ben@example.com': { tryThis: 'Another attendee. Race Ana for the last seat.', startAt: '/events' },
   'ada@example.com': { tryThis: 'Sees every user and who registered. Changes nothing.', startAt: '/admin' },
+  'sam@example.com': { tryThis: 'Publishes delivery slots and sees the orders in them.', startAt: '/supply/supplier' },
+  'carla@example.com': { tryThis: 'Orders material to a jobsite, and cancels.', startAt: '/supply' },
+  'dev@example.com': { tryThis: 'Takes delivery jobs and marks them delivered.', startAt: '/supply/jobs' },
+  'dana@example.com': { tryThis: 'Another driver. Race Dev for an open job.', startAt: '/supply/jobs' },
 };
 
 export const personas: Persona[] = seed.people.map((person) => ({
@@ -46,11 +50,21 @@ export const proofOrganizerIds = new Set([seed.proofOrganizer.id, seed.otherProo
 /** The attendees a proof run sends at an event, all at once. */
 export const crowd: DemoPerson[] = seed.crowd;
 
+/** The supply race: a supplier, a contractor, and the drivers who all try to take one job. */
+export const supplyProof: { supplier: DemoPerson; contractor: DemoPerson; drivers: DemoPerson[] } = seed.supplyProof;
+
 export function findPerson(id: string | null): DemoPerson | null {
   if (!id) return null;
   return (
-    [...seed.people, seed.proofOrganizer, seed.otherProofOrganizer, ...seed.crowd].find((person) => person.id === id) ??
-    null
+    [
+      ...seed.people,
+      seed.proofOrganizer,
+      seed.otherProofOrganizer,
+      ...seed.crowd,
+      seed.supplyProof.supplier,
+      seed.supplyProof.contractor,
+      ...seed.supplyProof.drivers,
+    ].find((person) => person.id === id) ?? null
   );
 }
 

@@ -12,7 +12,7 @@ const people = {
 };
 type Who = keyof typeof people;
 
-const event = { organizerId: people.owner.id };
+const event = { ownerId: people.owner.id };
 
 // SPEC section 4, one row per action. Each column is one role alone.
 const TABLE: [Action, Record<Who, boolean>][] = [
@@ -33,6 +33,34 @@ describe('policy', () => {
       for (const who of Object.keys(people) as Who[]) {
         expect(can(people[who], action, event), `${who} -> ${action}`).toBe(expected[who]);
       }
+    }
+  });
+
+  it('matches the supply permission table in SPEC section 14', () => {
+    const supply = {
+      contractor: person('contractor', ['contractor']),
+      supplier: person('supplier', ['supplier']),
+      otherSupplier: person('other-supplier', ['supplier']),
+      driver: person('driver', ['driver']),
+      admin: people.admin,
+    };
+    const slot = { ownerId: supply.supplier.id };
+    const SUPPLY: [Action, Record<keyof typeof supply, boolean>][] = [
+      ['slot:read', { contractor: true, supplier: true, otherSupplier: true, driver: true, admin: true }],
+      ['slot:create', { contractor: false, supplier: true, otherSupplier: true, driver: false, admin: false }],
+      ['slot:list-orders', { contractor: false, supplier: true, otherSupplier: false, driver: false, admin: true }],
+      ['order:own', { contractor: true, supplier: false, otherSupplier: false, driver: false, admin: false }],
+      ['job:work', { contractor: false, supplier: false, otherSupplier: false, driver: true, admin: false }],
+    ];
+
+    for (const [action, expected] of SUPPLY) {
+      for (const who of Object.keys(supply) as (keyof typeof supply)[]) {
+        expect(can(supply[who], action, slot), `${who} -> ${action}`).toBe(expected[who]);
+      }
+    }
+    // The event roles get nothing in the supply flow beyond seeing slots.
+    for (const [action] of SUPPLY.slice(1)) {
+      for (const who of ['attendee', 'owner'] as const) expect(can(people[who], action, slot), `${who} -> ${action}`).toBe(false);
     }
   });
 

@@ -10,7 +10,7 @@ const db = testDb();
 // other test files leave their own people behind. These tests empty every
 // table, before each test and once more at the end, so no seed rows are left
 // for other files (files run one at a time, see vitest.config.ts).
-const emptyAllTables = () => sql`TRUNCATE registrations, events, users`.execute(db);
+const emptyAllTables = () => sql`TRUNCATE orders, delivery_slots, registrations, events, users`.execute(db);
 beforeEach(async () => {
   await emptyAllTables();
 });
@@ -64,5 +64,14 @@ describe('demo reset', () => {
       .select((eb) => eb.fn.countAll<string>().as('rows'))
       .executeTakeFirstOrThrow();
     expect(Number(rows)).toBe(result.registrations);
+    for (const slot of data.slots) {
+      const stored = await db.selectFrom('delivery_slots').select('booked_count').where('id', '=', slot.id).executeTakeFirstOrThrow();
+      expect(stored.booked_count, slot.title).toBe(slot.orders.length);
+    }
+    const orders = await db.selectFrom('orders').select(['id', 'status', 'driver_id']).execute();
+    expect(orders).toHaveLength(result.orders);
+    expect(orders.filter((order) => order.driver_id).length).toBe(
+      data.slots.flatMap((slot) => slot.orders).filter((order) => order.driverId).length,
+    );
   });
 });

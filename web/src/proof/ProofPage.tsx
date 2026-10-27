@@ -8,6 +8,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useHealth } from '../api/queries';
 import { ProblemNotice } from '../components/ProblemNotice';
 import { RACE_TESTS_URL, SEAT_SQL_URL, SPEC_URL } from '../links';
+import { DriverPanel } from './DriverPanel';
 import { CancelPanel, PermissionsPanel } from './MorePanels';
 import { DatabaseCheck, OutcomeTiles, TimingBars } from './RaceResults';
 import { deps } from './deps';
@@ -27,6 +28,7 @@ export function ProofPage() {
       </header>
       <RacePanel onFinished={setLastRace} />
       <CancelPanel race={lastRace} />
+      <DriverPanel />
       <PermissionsPanel />
       <footer className="space-y-2 rounded-xl border bg-muted/40 p-4 text-sm">
         <p className="font-medium">This page shows that it works. The tests show why.</p>

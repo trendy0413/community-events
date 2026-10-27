@@ -128,3 +128,87 @@ export function useChangeCapacity(eventId: string) {
     onSettled: refresh,
   });
 }
+
+// The jobsite supply flow (SPEC section 14).
+
+export function useSlots(filter: { supplier?: 'me' } = {}) {
+  const person = usePersonKey();
+  return useQuery({
+    queryKey: [person, 'slots', filter],
+    queryFn: () => unwrap(api.GET('/v1/slots', { params: { query: { ...filter, limit: 50 } } })),
+    retry: retryTransient,
+  });
+}
+
+export function useSlotOrders(slotId: string, enabled = true) {
+  const person = usePersonKey();
+  return useQuery({
+    queryKey: [person, 'slot-orders', slotId],
+    queryFn: () => unwrap(api.GET('/v1/slots/{id}/orders', { params: { path: { id: slotId } } })),
+    enabled,
+    retry: retryTransient,
+  });
+}
+
+export function useMyOrders() {
+  const person = usePersonKey();
+  return useQuery({
+    queryKey: [person, 'my-orders'],
+    queryFn: () => unwrap(api.GET('/v1/me/orders', { params: { query: { limit: 50 } } })),
+    retry: retryTransient,
+  });
+}
+
+export function useJobs() {
+  const person = usePersonKey();
+  return useQuery({
+    queryKey: [person, 'jobs'],
+    queryFn: () => unwrap(api.GET('/v1/jobs')),
+    retry: retryTransient,
+  });
+}
+
+export function useCreateSlot() {
+  const refresh = useRefreshAll();
+  return useMutation({
+    mutationFn: (body: Schemas['CreateSlotInput']) => unwrap(api.POST('/v1/slots', { body })),
+    onSuccess: refresh,
+  });
+}
+
+/**
+ * The caller names the order with its own id (S2) and sends the same id when
+ * it tries again, so a retry never books a second delivery.
+ */
+export function usePlaceOrder(slotId: string) {
+  const refresh = useRefreshAll();
+  return useMutation({
+    mutationFn: ({ orderId, body }: { orderId: string; body: Schemas['PlaceOrderInput'] }) =>
+      unwrap(api.PUT('/v1/slots/{id}/orders/{orderId}', { params: { path: { id: slotId, orderId } }, body })),
+    onSettled: refresh,
+  });
+}
+
+export function useCancelOrder(orderId: string) {
+  const refresh = useRefreshAll();
+  return useMutation({
+    mutationFn: () => unwrap(api.DELETE('/v1/orders/{orderId}', { params: { path: { orderId } } })),
+    onSettled: refresh,
+  });
+}
+
+export function useClaimJob(orderId: string) {
+  const refresh = useRefreshAll();
+  return useMutation({
+    mutationFn: () => unwrap(api.PUT('/v1/jobs/{orderId}/driver', { params: { path: { orderId } } })),
+    onSettled: refresh,
+  });
+}
+
+export function useMarkDelivered(orderId: string) {
+  const refresh = useRefreshAll();
+  return useMutation({
+    mutationFn: () => unwrap(api.PUT('/v1/jobs/{orderId}/delivered', { params: { path: { orderId } } })),
+    onSettled: refresh,
+  });
+}

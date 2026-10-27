@@ -17,6 +17,9 @@ const RESPONSE_HEADERS: Record<string, Json> = {
   'post /v1/events 201': {
     Location: { description: 'Path of the new event, for example /v1/events/{id}', schema: { type: 'string' } },
   },
+  'post /v1/slots 201': {
+    Location: { description: 'Path of the new slot, for example /v1/slots/{id}', schema: { type: 'string' } },
+  },
 };
 
 /**

@@ -1,9 +1,12 @@
+import { randomUUID } from 'node:crypto';
 import { createServer, type AddressInfo, type Socket } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type App, buildApp } from '../../src/http/app.js';
 import { createDb } from '../../src/db/client.js';
 import type { Problem } from '../../src/http/errors.js';
 import type { EventView } from '../../src/modules/events/schemas.js';
+import { insertSlot } from '../../src/modules/supply/repository.js';
+import { placeOrder } from '../../src/modules/supply/service.js';
 import { createUser, createUsers, operationOf, seatCounts, testDb, v1Operations } from './helpers.js';
 
 const db = testDb();
@@ -20,6 +23,9 @@ afterAll(async () => {
 
 const HOUR_MS = 60 * 60 * 1000;
 const as = (userId: string) => ({ 'x-dev-user-id': userId });
+const inHours = (hours: number) => new Date(Date.now() + hours * HOUR_MS).toISOString();
+const slotBody = { title: 'Morning run', area: 'Downtown', startsAt: inHours(2), timezone: 'UTC', capacity: 2 };
+const orderBody = { items: '10 sheets of drywall', jobsite: '4 Pier Rd' };
 
 const eventBody = (options: { capacity?: number; inHours?: number } = {}) => ({
   title: 'Reading circle',
@@ -272,17 +278,26 @@ describe('privacy', () => {
     shows?: string;
   }
 
-  /** An event with an organizer and two registered attendees, plus an admin. */
+  /**
+   * An event with an organizer and two registered attendees, an admin, and a
+   * supplier's delivery slot with a contractor's order (SPEC section 14).
+   */
   async function setup() {
     const organizer = await createUser(db, ['organizer']);
     const [attendee = '', otherAttendee = ''] = await createUsers(db, 2);
     const admin = await createUser(db, ['admin']);
-    const rows = await db.selectFrom('users').select(['id', 'email']).where('id', 'in', [organizer, attendee, otherAttendee, admin]).execute();
+    const supplier = await createUser(db, ['supplier']);
+    const contractor = await createUser(db, ['contractor']);
+    const everyone = [organizer, attendee, otherAttendee, admin, supplier, contractor];
+    const rows = await db.selectFrom('users').select(['id', 'email']).where('id', 'in', everyone).execute();
     const event = await createEventAs(organizer);
     for (const who of [attendee, otherAttendee]) {
       expect((await registerAs(event.id, who)).statusCode).toBe(201);
     }
-    return { organizer, attendee, otherAttendee, event, emails: rows };
+    const slot = await insertSlot(db, supplier, { ...slotBody, startsAt: new Date(Date.now() + HOUR_MS).toISOString() });
+    const order = randomUUID();
+    await placeOrder(db, slot, order, contractor, orderBody);
+    return { organizer, attendee, otherAttendee, event, slot, order, emails: rows };
   }
 
   /**
@@ -292,7 +307,7 @@ describe('privacy', () => {
    */
   async function expectNoOtherEmails(viewer: string, setupData: Awaited<ReturnType<typeof setup>>, calls: Call[]) {
     const others = setupData.emails.filter((row) => row.id !== viewer).map((row) => row.email);
-    expect(others).toHaveLength(3);
+    expect(others).toHaveLength(5);
     for (const { status, shows, ...call } of calls) {
       const res = await app.inject({ ...call, headers: as(viewer) });
       const label = `${call.method} ${call.url}`;
@@ -301,13 +316,17 @@ describe('privacy', () => {
       if (shows !== undefined) expect(res.body, label).toContain(shows);
       for (const email of others) expect(res.body, label).not.toContain(email);
     }
-    const covered = new Set(calls.map((call) => operationOf(call.method, call.url, setupData.event.id)));
+    const covered = new Set(
+      calls.map((call) =>
+        operationOf(call.method, call.url, setupData.event.id, { [setupData.slot]: 'id', [setupData.order]: 'orderId' }),
+      ),
+    );
     expect(v1Operations(app).filter((operation) => !covered.has(operation))).toEqual([]);
   }
 
   it("R6 no endpoint shows another user's email to an attendee", async () => {
     const data = await setup();
-    const { attendee, organizer, event } = data;
+    const { attendee, organizer, event, slot, order } = data;
     await expectNoOtherEmails(attendee, data, [
       { method: 'GET', url: '/v1/health', status: 200 },
       { method: 'GET', url: '/v1/me', status: 200, shows: attendee },
@@ -321,12 +340,22 @@ describe('privacy', () => {
       { method: 'PUT', url: `/v1/events/${event.id}/registrations/me`, status: 200, shows: event.id },
       { method: 'DELETE', url: `/v1/events/${event.id}/registrations/me`, status: 204 },
       { method: 'GET', url: '/v1/me/registrations', status: 200, shows: event.id },
+      { method: 'GET', url: '/v1/slots?limit=50', status: 200, shows: slot },
+      { method: 'POST', url: '/v1/slots', payload: { ...slotBody, startsAt: inHours(2) }, status: 403 },
+      { method: 'GET', url: `/v1/slots/${slot}`, status: 200, shows: slot },
+      { method: 'GET', url: `/v1/slots/${slot}/orders`, status: 403 },
+      { method: 'PUT', url: `/v1/slots/${slot}/orders/${order}`, payload: orderBody, status: 403 },
+      { method: 'DELETE', url: `/v1/orders/${order}`, status: 403 },
+      { method: 'GET', url: '/v1/me/orders', status: 403 },
+      { method: 'GET', url: '/v1/jobs', status: 403 },
+      { method: 'PUT', url: `/v1/jobs/${order}/driver`, status: 403 },
+      { method: 'PUT', url: `/v1/jobs/${order}/delivered`, status: 403 },
     ]);
   });
 
   it("R6 no endpoint shows another user's email to an organizer", async () => {
     const data = await setup();
-    const { organizer, otherAttendee, event } = data;
+    const { organizer, otherAttendee, event, slot, order } = data;
     await expectNoOtherEmails(organizer, data, [
       { method: 'GET', url: '/v1/health', status: 200 },
       { method: 'GET', url: '/v1/me', status: 200, shows: organizer },
@@ -341,6 +370,16 @@ describe('privacy', () => {
       { method: 'PUT', url: `/v1/events/${event.id}/registrations/me`, status: 403 },
       { method: 'DELETE', url: `/v1/events/${event.id}/registrations/me`, status: 403 },
       { method: 'GET', url: '/v1/me/registrations', status: 403 },
+      { method: 'GET', url: '/v1/slots?limit=50', status: 200, shows: slot },
+      { method: 'POST', url: '/v1/slots', payload: { ...slotBody, startsAt: inHours(2) }, status: 403 },
+      { method: 'GET', url: `/v1/slots/${slot}`, status: 200, shows: slot },
+      { method: 'GET', url: `/v1/slots/${slot}/orders`, status: 403 },
+      { method: 'PUT', url: `/v1/slots/${slot}/orders/${order}`, payload: orderBody, status: 403 },
+      { method: 'DELETE', url: `/v1/orders/${order}`, status: 403 },
+      { method: 'GET', url: '/v1/me/orders', status: 403 },
+      { method: 'GET', url: '/v1/jobs', status: 403 },
+      { method: 'PUT', url: `/v1/jobs/${order}/driver`, status: 403 },
+      { method: 'PUT', url: `/v1/jobs/${order}/delivered`, status: 403 },
     ]);
   });
 });

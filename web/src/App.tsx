@@ -10,6 +10,11 @@ import { MyRegistrationsPage } from './pages/MyRegistrationsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { OrganizerPage } from './pages/OrganizerPage';
 import { StartPage } from './pages/StartPage';
+import { JobsPage } from './pages/supply/JobsPage';
+import { MyOrdersPage } from './pages/supply/MyOrdersPage';
+import { SlotsPage } from './pages/supply/SlotsPage';
+import { SupplierPage } from './pages/supply/SupplierPage';
+import { SupplyLayout } from './pages/supply/SupplyLayout';
 import { ProofPage } from './proof/ProofPage';
 
 const queryClient = new QueryClient({
@@ -29,6 +34,16 @@ const router = createBrowserRouter([
       { path: '/me/registrations', element: <MyRegistrationsPage /> },
       { path: '/organizer', element: <OrganizerPage /> },
       { path: '/admin', element: <AdminPage /> },
+      {
+        path: '/supply',
+        element: <SupplyLayout />,
+        children: [
+          { index: true, element: <SlotsPage /> },
+          { path: 'orders', element: <MyOrdersPage /> },
+          { path: 'supplier', element: <SupplierPage /> },
+          { path: 'jobs', element: <JobsPage /> },
+        ],
+      },
       { path: '/proof', element: <ProofPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
