@@ -17,7 +17,8 @@ npm run test:unit          # tests that need no database
 npm run lint               # ESLint, then the rule-to-test check
 npm run check:rules        # SPEC rule IDs vs test names; `npm run check:rules -- --strict` also fails on missing tests
 npm run typecheck
-npm run openapi            # export openapi/openapi.json and regenerate web/src/api/schema.d.ts
+npm run openapi            # export openapi/openapi.json from the route schemas
+npm run check:openapi      # fail if openapi/openapi.json is not valid OpenAPI or is out of date (CI runs this)
 npm run mutants            # only if mutants/ exists: each mutant must be caught by a test
 npm --prefix web run dev   # web client on http://localhost:5173 (proxies /v1 to the API)
 npm --prefix web run build # production web build
@@ -36,7 +37,8 @@ seed/personas.json       fixed fake demo people and events
 src/auth/devAuth.ts      dev identity stub (X-Dev-User-Id header)
 src/auth/policy.ts       can(actor, action, resource), deny by default
 src/http/errors.ts       domain errors -> application/problem+json
-src/http/schemas.ts      shared Zod schemas (problem shape, event id param)
+src/http/schemas.ts      shared Zod schemas (problem shape, event id param, list limit)
+src/http/openapi.ts      OpenAPI components: schemas named with .meta({ id }), unused ones dropped
 src/http/v1.ts           the /v1 scope: identity check, then the module routes
 src/modules/<feature>/   routes.ts, service.ts, repository.ts, schemas.ts
 migrations/*.sql         schema changes, add-only
@@ -85,7 +87,7 @@ Before saying any task is done, run `/verify`. Each commit must pass all checks 
 - SPEC updated if behavior changed.
 - A test named by rule ID covers each behavior change.
 - `/verify` passes (lint, typecheck, all tests, plus mutants and the web build when they exist).
-- OpenAPI regenerated if the contract changed.
+- `npm run openapi` run if the contract changed (CI fails when `openapi/openapi.json` is out of date).
 - README and `docs/ARCHITECTURE.md` updated if a fact they state changed.
 
 ## Don't

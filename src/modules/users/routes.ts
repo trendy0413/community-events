@@ -12,7 +12,7 @@ const UserResponse = z.object({
   name: z.string(),
   email: z.string(),
   roles: z.array(z.enum(ROLES)),
-});
+}).meta({ id: 'User' });
 
 export const userRoutes: FastifyPluginCallbackZod<{ db: Db }> = (app, { db }, done) => {
   app.get(

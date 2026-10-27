@@ -11,6 +11,7 @@ import {
 import type { AuthMode, Config } from './config.js';
 import type { Db } from './db/client.js';
 import { frameworkErrors, registerErrorHandling } from './http/errors.js';
+import { transformObject } from './http/openapi.js';
 import { v1Routes } from './http/v1.js';
 import { healthRoutes } from './modules/health/routes.js';
 
@@ -70,8 +71,15 @@ export async function buildApp(options: AppOptions) {
         },
       },
       security: [{ devUser: [] }],
+      tags: [
+        { name: 'events', description: 'Events, their seat counts and their capacity' },
+        { name: 'registrations', description: 'Register and cancel. Both are safe to retry.' },
+        { name: 'users', description: 'The signed-in user, and every user for admins' },
+        { name: 'health', description: 'Is the API up, and can it reach the database? No identity needed.' },
+      ],
     },
     transform: jsonSchemaTransform,
+    transformObject,
   });
   await app.register(swaggerUi, { routePrefix: '/docs' });
   // The contract at a stable path, for client generators (SPEC section 6).

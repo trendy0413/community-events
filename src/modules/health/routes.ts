@@ -9,7 +9,7 @@ const HealthResponse = z.object({
   status: z.enum(['ok', 'unavailable']),
   db: z.enum(['ok', 'down']),
   identity: z.literal('dev-stub'),
-});
+}).meta({ id: 'Health' });
 
 // A health check must answer quickly even when the database hangs, so a
 // monitor sees "down" instead of a timeout of its own.

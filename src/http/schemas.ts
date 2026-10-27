@@ -3,6 +3,7 @@ import { z } from 'zod';
 // Shared request and response schemas. Zod validates every input, and each
 // /v1 route also declares its responses: the server sends only the fields
 // listed there, so a new database column never leaks (SPEC section 6).
+// `.meta({ id })` names a schema in the OpenAPI contract (src/http/openapi.ts).
 
 export const ProblemSchema = z
   .object({
@@ -22,7 +23,7 @@ export const ProblemSchema = z
     detail: z.string(),
     errors: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
   })
-  .describe('Error in the problem+json shape (SPEC section 7)');
+  .meta({ id: 'Problem', description: 'Error in the problem+json shape (SPEC section 7)' });
 
 const PROBLEM_RESPONSE = {
   description: 'Error (SPEC section 7). Clients switch on `code`.',

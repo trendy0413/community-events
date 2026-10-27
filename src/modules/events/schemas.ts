@@ -42,13 +42,13 @@ export const CreateEventBody = z.strictObject({
     return z.NEVER;
   }),
   capacity: z.number().int().min(1).max(500),
-});
+}).meta({ id: 'CreateEvent' });
 
 export type CreateEventInput = z.infer<typeof CreateEventBody>;
 
 export const ChangeCapacityBody = z.strictObject({
   capacity: z.number().int().min(1).max(500),
-});
+}).meta({ id: 'ChangeCapacity' });
 
 export const ListEventsQuery = z.strictObject({
   organizer: z.literal('me').optional(),
@@ -67,11 +67,11 @@ export const EventResponse = z.object({
   seatsLeft: z.number().int(),
   organizer: z.object({ id: z.uuid(), name: z.string() }),
   myRegistration: z.object({ id: z.uuid(), status: z.literal('active') }).nullable(),
-});
+}).meta({ id: 'Event' });
 
 export type EventView = z.infer<typeof EventResponse>;
 
-export const EventListResponse = z.object({ events: z.array(EventResponse) });
+export const EventListResponse = z.object({ events: z.array(EventResponse) }).meta({ id: 'EventList' });
 
 // Names and times only: attendee emails stay private (R6).
 export const AttendeeListResponse = z.object({
@@ -82,6 +82,6 @@ export const AttendeeListResponse = z.object({
       registeredAt: z.iso.datetime(),
     }),
   ),
-});
+}).meta({ id: 'AttendeeList' });
 
 export type AttendeeList = z.infer<typeof AttendeeListResponse>;

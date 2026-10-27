@@ -110,7 +110,9 @@ Data-model constraints have no rule ID of their own: they back up the rules in t
 
 `anyone` = no identity needed. `any user` = any known user (R8).
 
-**Response schemas:** every `/v1` route declares a response schema. The server sends only the fields listed in it (an allow-list), so a new database column can never leak to clients. The R6 leak tests call every endpoint, as an attendee and as an organizer, and fail if a route the server answers is missing from their list.
+**Response schemas:** every `/v1` route declares a response schema. The server sends only the fields listed in it (an allow-list), so a new database column can never leak to clients.
+
+**Changing `/v1`:** responses may gain fields, so clients must ignore fields they do not know. The contract (`openapi/openapi.json`) allows extra response fields for that reason. Removing or renaming a field, or changing its meaning, needs a new version. Request bodies are the other way round: unknown fields are rejected (R10). The R6 leak tests call every endpoint, as an attendee and as an organizer, and fail if a route the server answers is missing from their list.
 
 Every `/v1` response sends `Cache-Control: no-store`, so seat counts are never cached by a browser or a proxy.
 

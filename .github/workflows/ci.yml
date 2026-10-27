@@ -38,6 +38,8 @@ jobs:
       - name: Lint (includes the rule-to-test check)
         run: npm run lint
       - run: npm run typecheck
+      - name: OpenAPI contract is valid and matches the routes
+        run: npm run check:openapi
       - name: Tests (unit + integration on PostgreSQL 16)
         run: npm test
 
@@ -55,4 +57,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # The contract is generated on Windows during development, so the same
+      # check here catches output that differs between systems.
+      - run: npm run check:openapi
       - run: npm run test:unit

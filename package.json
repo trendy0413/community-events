@@ -17,6 +17,8 @@
     "test:unit": "cross-env AUTH_MODE=dev-stub vitest run --project unit",
     "lint": "eslint . && npm run check:rules",
     "check:rules": "tsx scripts/check-rule-tests.ts",
+    "openapi": "tsx scripts/export-openapi.ts",
+    "check:openapi": "tsx scripts/export-openapi.ts --check",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -30,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@seriousme/openapi-schema-validator": "^2.11.0",
     "@types/node": "^24.19.2",
     "@types/pg": "^8.23.1",
     "cross-env": "^10.1.0",

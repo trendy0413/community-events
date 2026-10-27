@@ -14,7 +14,7 @@ export const MyRegistrationsResponse = z.object({
       event: z.object({ id: z.uuid(), title: z.string(), startsAt: z.iso.datetime(), timezone: z.string() }),
     }),
   ),
-});
+}).meta({ id: 'MyRegistrations' });
 
 export function toMyRegistrationsResponse(rows: MyRegistration[]): z.infer<typeof MyRegistrationsResponse> {
   return {
@@ -35,7 +35,7 @@ export const RegistrationResponse = z.object({
   status: z.enum(['active', 'cancelled']),
   createdAt: z.iso.datetime(),
   cancelledAt: z.iso.datetime().nullable(),
-});
+}).meta({ id: 'Registration' });
 
 export function toRegistrationResponse(registration: Registration): z.infer<typeof RegistrationResponse> {
   return {

@@ -51,6 +51,7 @@ npm test           # unit and integration tests; the integration tests need Post
 npm run test:unit  # tests that need no database
 npm run lint       # ESLint, then the check that every rule in docs/SPEC.md has its tests
 npm run typecheck
+npm run check:openapi  # the committed contract is valid OpenAPI and matches the routes
 ```
 
 - Without a database, `npm test` stops within seconds and says how to fix it. It never skips tests.
@@ -65,4 +66,5 @@ npm run typecheck
 | [src/modules/registrations/repository.ts](src/modules/registrations/repository.ts) | The SQL that keeps the last seat safe |
 | [migrations/001_init.sql](migrations/001_init.sql) | The schema and its constraints |
 | [test/integration/registrations.test.ts](test/integration/registrations.test.ts) | The race tests |
+| [openapi/openapi.json](openapi/openapi.json) | The API contract, generated from the route schemas (`npm run openapi`). Clients are generated from it. |
 | [CLAUDE.md](CLAUDE.md) | The guide for coding agents working on this repo |

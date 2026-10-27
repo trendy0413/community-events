@@ -11,7 +11,7 @@ Run the checks in this order. Stop at the first failing check. Show the failing 
 2. `npm run typecheck`
 3. `npm run test:unit`
 4. `npm test`. This needs PostgreSQL (`DATABASE_URL`, or `npm run db:up`). If it stops with the "needs PostgreSQL 16" message, report that. It is not a pass.
-5. Only if `openapi/` exists: `npm run openapi`, then `git diff --exit-code openapi/ web/src/api/`. Any change means the committed contract was out of date: keep the new files and say so.
+5. `npm run check:openapi`. It fails if the contract is not valid OpenAPI or `openapi/openapi.json` is out of date. If it is out of date, run `npm run openapi`, keep the new file and say so.
 6. Only if `mutants/` exists: `npm run mutants`. Every mutant must be caught by a test.
 7. Only if `web/` exists: `npm --prefix web run build`.
 
