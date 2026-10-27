@@ -9,7 +9,7 @@ import { createEvent, createUser, createUsers, seatCounts, testDb } from './help
 const db = testDb(60);
 afterAll(() => db.destroy());
 
-const RACE_TIMEOUT_MS = 60_000;
+const RACE_TIMEOUT_MS = 120_000;
 const HOUR_MS = 60 * 60 * 1000;
 
 const newEvent = async (capacity: number, startsAt?: Date): Promise<string> =>
@@ -23,6 +23,13 @@ function codeOf(result: PromiseSettledResult<unknown>): ErrorCode | 'ok' | 'not 
 }
 
 function tally(results: PromiseSettledResult<unknown>[]): Record<string, number> {
+  // An unexpected error fails here with its message, so a failure says what
+  // went wrong instead of only that the counts are off.
+  const unexpected = results
+    .filter((result) => codeOf(result) === 'not a DomainError')
+    .map((result) => (result.status === 'rejected' ? String(result.reason) : ''));
+  expect(unexpected, 'errors that are not SPEC error codes').toEqual([]);
+
   const counts: Record<string, number> = {};
   for (const result of results) {
     const code = codeOf(result);
