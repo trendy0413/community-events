@@ -38,7 +38,7 @@ One person can hold more than one role, for example organizer and attendee. The 
 | R7 | Capacity can't be set below the number of people already registered, and can't be changed after the event starts. | assumption | Registered people lose their seat without notice. | `R7 rejects capacity below registered count`, `R7 rejects capacity change after the event starts`, `R7 capacity decrease racing registrations never overbooks`, `R7 capacity change retries when a cancel commits in between` |
 | R8 | Every `/v1` route except `/v1/health` needs an identity. A missing, malformed or unknown user id gets 401. | added | Anyone could change data without an identity. | `R8 request without identity gets 401`, `R8 unknown user gets 401`, `R8 health answers without an identity` |
 | R9 | The dev identity stub (section 9) runs only when `AUTH_MODE=dev-stub`. If `AUTH_MODE` is missing or has another value, the server refuses to start. | added | On a real deployment, anyone can act as any user. | `R9 server refuses to start without AUTH_MODE` |
-| R10 | Input limits: title 3-80 characters, description up to 500, capacity 1-500, start time in the future and less than 1 year away, a valid IANA time zone. Unknown fields are rejected. | brief (exact limits added) | Bad or huge input breaks pages or fills the database. | `R10 rejects invalid event input`, `R10 rejects invalid capacity change input` |
+| R10 | Input limits: title 3-80 characters, description up to 500, no NUL characters in either, capacity 1-500, start time in the future and less than 1 year away, a valid IANA time zone. Unknown fields are rejected. | brief (exact limits added) | Bad or huge input breaks pages or fills the database. | `R10 rejects invalid event input`, `R10 rejects invalid capacity change input` |
 
 Source: `brief` = stated in the brief. `brief (implied)` = follows from the brief. `assumption` = a product choice (see also section 11). `added` = a safety rule the brief does not ask for.
 
@@ -137,7 +137,8 @@ Every `/v1` response sends `Cache-Control: no-store`, so seat counts are never c
 
 **Create event** body: `{title, description?, startsAt, timezone, capacity}`.
 - `startsAt` is an RFC 3339 date-time (the strict form of ISO 8601) with an offset or `Z`, for example `2026-11-05T18:00:00-05:00`. A time without an offset is rejected.
-- `timezone` is stored with its standard spelling, so `america/new_york` becomes `America/New_York`.
+- `startsAt` is stored in UTC, whatever offset the client sent.
+- `timezone` is stored with its standard spelling, so `america/new_york` becomes `America/New_York`. A current name is never replaced by an older alias (`Europe/Kyiv` stays `Europe/Kyiv`).
 - An empty `description` is stored as `null`, the same as leaving it out.
 
 **Attendee list** (`GET /v1/events/{id}/registrations`)

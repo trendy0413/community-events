@@ -3,30 +3,42 @@ import { LimitQuery } from '../../http/schemas.js';
 
 const YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
+// Intl does not list UTC itself, though it accepts it.
+const KNOWN_ZONES = new Map([...Intl.supportedValuesOf('timeZone'), 'UTC'].map((zone) => [zone.toLowerCase(), zone]));
+
 /**
- * The canonical IANA name for a time zone, or null. Intl ignores case, so
- * "america/new_york" becomes "America/New_York": clients such as Android's
- * ZoneId are case-sensitive. Offset ids like "+05:30" are not IANA names.
+ * The IANA name for a time zone with its standard spelling, or null. Clients
+ * such as Android's ZoneId are case-sensitive, so "america/new_york" is stored
+ * as "America/New_York". Intl's own canonical name is not used: Node's time
+ * zone data maps current names to old ones (Europe/Kyiv to Europe/Kiev), so a
+ * name Intl accepts but does not list is kept as sent. Offset ids like
+ * "+05:30" are not IANA names.
  */
 function canonicalTimeZone(name: string): string | null {
   if (!/^[A-Za-z]/.test(name)) return null;
   try {
-    return new Intl.DateTimeFormat('en-US', { timeZone: name }).resolvedOptions().timeZone;
+    new Intl.DateTimeFormat('en-US', { timeZone: name });
   } catch {
     return null;
   }
+  return KNOWN_ZONES.get(name.toLowerCase()) ?? name;
 }
+
+// PostgreSQL text cannot hold a NUL character; without this check such a
+// title would fail in the database (500) instead of here (400).
+const NO_NUL = [(value: string) => !value.includes('\0'), 'Must not contain a NUL character'] as const;
 
 // R10. strictObject rejects unknown fields, so a typo in a field name is an
 // error instead of a silently ignored value.
 export const CreateEventBody = z.strictObject({
-  title: z.string().trim().min(3).max(80),
+  title: z.string().trim().min(3).max(80).refine(...NO_NUL),
   // An empty description is stored as "no description" (null), the same as
   // leaving it out.
   description: z
     .string()
     .trim()
     .max(500)
+    .refine(...NO_NUL)
     .nullish()
     .transform((value) => value || null),
   // RFC 3339: an offset (or Z) is required, because a time without one means
@@ -35,7 +47,10 @@ export const CreateEventBody = z.strictObject({
   startsAt: z.iso
     .datetime({ offset: true, abort: true })
     .refine((value) => Date.parse(value) > Date.now(), 'Must be in the future')
-    .refine((value) => Date.parse(value) < Date.now() + YEAR_MS, 'Must be less than 1 year away'),
+    .refine((value) => Date.parse(value) < Date.now() + YEAR_MS, 'Must be less than 1 year away')
+    // Stored as UTC. RFC 3339 allows offsets up to ±23:59 and PostgreSQL only
+    // up to ±15:59, so the database never sees the client's offset.
+    .transform((value) => new Date(value).toISOString()),
   timezone: z.string().transform((value, ctx) => {
     const canonical = canonicalTimeZone(value);
     if (canonical) return canonical;

@@ -121,6 +121,8 @@ describe('API', () => {
       ['title too short', { ...validEvent(), title: 'ab' }, 'title'],
       ['title of spaces only', { ...validEvent(), title: '     ' }, 'title'],
       ['title too long', { ...validEvent(), title: 'x'.repeat(81) }, 'title'],
+      ['title with a NUL character', { ...validEvent(), title: 'Book\u0000club' }, 'title'],
+      ['description with a NUL character', { ...validEvent(), description: 'a\u0000b' }, 'description'],
       ['title missing', { startsAt: inDays(7), timezone: 'America/New_York', capacity: 2 }, 'title'],
       ['description too long', { ...validEvent(), description: 'x'.repeat(501) }, 'description'],
       ['capacity zero', { ...validEvent(), capacity: 0 }, 'capacity'],
@@ -155,6 +157,8 @@ describe('API', () => {
       ['capacity 1', { ...validEvent(), capacity: 1 }, { capacity: 1 }],
       ['capacity 500', { ...validEvent(), capacity: 500 }, { capacity: 500 }],
       ['offset start almost a year away', { ...validEvent(), startsAt: inDays(364).replace('Z', '+05:30') }, {}],
+      ['offset beyond what PostgreSQL parses', { ...validEvent(), startsAt: inDays(7).replace('Z', '+23:59') }, {}],
+      ['current IANA name kept', { ...validEvent(), timezone: 'Europe/Kyiv' }, { timezone: 'Europe/Kyiv' }],
       ['UTC', { ...validEvent(), timezone: 'UTC' }, { timezone: 'UTC' }],
       ['lower-case time zone', { ...validEvent(), timezone: 'america/new_york' }, { timezone: 'America/New_York' }],
     ];
