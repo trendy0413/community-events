@@ -9,7 +9,7 @@ A REST API for community events: organizers create events with a capacity, atten
 - **The seat limit is enforced by the database.** One conditional `UPDATE ... WHERE registered_count < capacity` plus a `CHECK` constraint ([the SQL](src/modules/registrations/repository.ts)). [The race tests](test/integration/registrations.test.ts) send 50 parallel registrations for 10 seats on real PostgreSQL, with a pool of 60 connections so the calls really overlap; [the lock-wait tests](test/integration/lock-wait.test.ts) show the second booking waiting for the first.
 - **Retry-safe register and cancel.** A phone that resends on a weak network never books twice and never gets an error for a booking that worked: `PUT` and `DELETE` on `/v1/events/{id}/registrations/me` (R2, R3 tests in the same file, and [the dropped-connection tests](test/integration/registrations-retry.test.ts)).
 - **One deny-by-default permission check.** Every `/v1` route except `/v1/health` calls `can()` ([src/auth/policy.ts](src/auth/policy.ts)); [a test](test/unit/policy.test.ts) checks every cell of the role-by-action table.
-- **Every rule has a test, and the tests are tested.** CI fails if a SPEC rule has no test named after it, and [11 deliberate breaks](mutants/mutants.json) must each fail a test.
+- **Every rule has a test, and the tests are tested.** CI fails if a SPEC rule has no test named after it, and [13 deliberate breaks](mutants/mutants.json) must each fail a test.
 - **One driver per delivery job.** Ten drivers taking one job at once: exactly one gets it ([the supply tests](test/integration/supply.test.ts), [the SQL](src/modules/supply/repository.ts)). Slots never book more deliveries than they have, and a phone can resend an order safely.
 - **No personal data can enter the demo.** No sign-up; only seeded `@example.com` people; the reset refuses a database with anyone else.
 
@@ -130,17 +130,18 @@ From git timestamps (planning and the first spec draft before the first commit a
 
 ## Evidence
 
-From [CI run #33](https://github.com/trendy0413/community-events/actions/runs/40545445993) on commit `e834850`, 2026-10-27:
+From [CI run #35](https://github.com/trendy0413/community-events/actions/runs/40558861761) on commit `42270fd`, 2026-10-27:
 
 | Check | Result |
 |---|---|
-| API tests on PostgreSQL 16 (unit and integration, 19 files) | 132 passed |
-| The same tests on the `docker-compose.yml` database (the README's Docker path) | 132 passed |
-| Mutants: deliberate breaks of R1-R7, S1, S3 and S4 | 11 of 11 caught |
-| Tests the SPEC lists by rule ID | 63 of 63 exist |
+| API tests on PostgreSQL 16 (unit and integration, 21 files) | 143 passed |
+| The same tests on the `docker-compose.yml` database (the README's Docker path) | 143 passed |
+| `docker compose up --build` on a fresh checkout: page, script bundle, request id, smoke and count checks | passed |
+| Mutants: deliberate breaks of R1-R7, S1, S3, S4 and O3 | 13 of 13 caught |
+| Tests the SPEC lists by rule ID | 72 of 72 exist |
 | OpenAPI contract | valid, matches the routes |
 | Web client: lint (with the W1 rule), format, types, generated types, build | passed |
 | Web logic tests (proof page, error wording, client) | 17 passed |
-| Windows: lint, typecheck, contract, unit tests | 43 passed |
+| Windows: lint, typecheck, contract, unit tests | 51 passed |
 
 On the live demo the same day: the proof page gave 10 seats, 40 "full" and "No overbooking" on runs in a row; the cancel panel freed one seat once and gave it to exactly one of 39; all 20 permission checks matched the SPEC. After the supply release, the driver panel sent 10 drivers at one job: one got it, nine were told it was taken, and the order read back was claimed by the winner. The [nightly job](https://github.com/trendy0413/community-events/actions/workflows/demo-ops.yml) checks the live counts against the active registrations, resets the data, and checks again.
