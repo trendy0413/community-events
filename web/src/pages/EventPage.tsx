@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAttendees, useEvent } from '../api/queries';
+import { CapacityForm } from '../components/CapacityForm';
 import { ProblemNotice } from '../components/ProblemNotice';
 import { RegistrationButton } from '../components/RegistrationButton';
 import { SeatBar } from '../components/SeatBar';
@@ -56,6 +57,9 @@ export function EventPage() {
                 seatsLeft={event.data.seatsLeft}
               />
               <RegistrationButton event={event.data} className="w-full sm:w-auto" />
+              <div className="border-t pt-4">
+                <CapacityForm event={event.data} />
+              </div>
             </CardContent>
           </Card>
           <Attendees eventId={id} />

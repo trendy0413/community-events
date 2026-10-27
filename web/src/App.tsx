@@ -7,6 +7,7 @@ import { EventPage } from './pages/EventPage';
 import { EventsPage } from './pages/EventsPage';
 import { MyRegistrationsPage } from './pages/MyRegistrationsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { OrganizerPage } from './pages/OrganizerPage';
 import { StartPage } from './pages/StartPage';
 import { ProofPage } from './proof/ProofPage';
 
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
       { path: '/events', element: <EventsPage /> },
       { path: '/events/:id', element: <EventPage /> },
       { path: '/me/registrations', element: <MyRegistrationsPage /> },
+      { path: '/organizer', element: <OrganizerPage /> },
       { path: '/proof', element: <ProofPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

@@ -71,8 +71,10 @@ export function explain(error: unknown, action: Action): Explanation {
   };
 }
 
-/** Field messages from a VALIDATION_FAILED answer, by field name. */
+/** Field messages from a VALIDATION_FAILED answer, by field name: the first message for each field. */
 export function fieldErrors(error: unknown): Record<string, string> {
   if (!(error instanceof ApiError) || error.problem?.code !== 'VALIDATION_FAILED') return {};
-  return Object.fromEntries((error.problem.errors ?? []).map((item) => [item.field, item.message]));
+  const byField: Record<string, string> = {};
+  for (const item of error.problem.errors ?? []) byField[item.field] ??= item.message;
+  return byField;
 }
